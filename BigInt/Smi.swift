@@ -18,11 +18,11 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
   internal let value: Storage
 
   internal var isZero: Bool {
-    return self.value == 0
+    return self.value == .zero
   }
 
   internal var isNegative: Bool {
-    return self.value < 0
+    return self.value < Storage(0)
   }
 
   // MARK: - Init
@@ -42,7 +42,7 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
   // MARK: - Unary operators
 
   internal var minus: BigInt {
-    // Binary numbers have a bit bigger range on the negative side
+    // Binary numbers have bigger range on the negative side.
     if self.value == Self.min {
       let magnitude = Self.min.magnitude
       let word = BigIntHeap.Word(magnitude)
@@ -58,28 +58,54 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
   }
 
   // MARK: - Binary operators
-/*
+
   internal func add(other: Smi) -> BigInt {
-    let result = self.value.addingReportingOverflow(other.value)
-    if !result.overflow {
-      return BigInt(Smi(result.partialValue))
+    let (result, overflow) = self.value.addingReportingOverflow(other.value)
+    if !overflow {
+      return BigInt(smi: result)
     }
 
-    // It is either:
-    // - 2 positive numbers added together
-    // - 2 negative numbers added together
+    // Binary numbers have bigger range on the negative side.
+    // Special case, don't ask.
+    if self.value == Storage.min && other.value == Storage.min {
+      let min = BigIntHeap.Word(Storage.min.magnitude)
+      let heap = BigIntHeap(isNegative: true, word: min << 1) // *2
+      return BigInt(heap)
+    }
 
-    let unsignedPartialValue = UInt32(result.partialValue)
-    let heap = BigIntHeap(low: unsignedPartialValue, high: 1)
+    // If we were positive:
+    // - we only can overflow into positive values
+    // - 'result' is negative, but it is value is exactly as we want,
+    //    we just need it to treat as unsigned
+    //
+    // If we were negative:
+    // - we only can overflow into negative values
+    // - 'result' is positive, we have to 2 compliment it and treat as unsigned
+    //
+    // If we were zero:
+    // - well... how did we overflow?
+
+    let isNegative = self.isNegative
+
+    let x = isNegative ? ((~result) &+ 1) : result
+    let unsigned = Storage.Magnitude(bitPattern: x)
+    let word = BigIntHeap.Word(unsigned)
+
+    let heap = BigIntHeap(isNegative: isNegative, word: word)
     return BigInt(heap)
   }
 
+  private func twoComplement(value: Storage) -> Storage {
+    return (~value) &+ 1
+  }
+/*
   internal func sub(other: Smi) -> BigInt {
     let result = self.value.subtractingReportingOverflow(other.value)
     if !result.overflow {
       return BigInt(Smi(result.partialValue))
     }
 
+    // Zero - (-max)
     fatalError()
   }
 
@@ -105,9 +131,7 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
     return "Smi(\(self.value))"
   }
 
-  // 'toString' because we Java now
   internal func toString(radix: Int, uppercase: Bool) -> String {
-    precondition(2 <= radix && radix <= 36, "radix must be in range 2...36")
     return String(self.value, radix: radix, uppercase: uppercase)
   }
 

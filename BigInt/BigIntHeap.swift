@@ -22,7 +22,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   // MARK: - Init
 
   internal init(isNegative: Bool, word: Word) {
-    self.isNegative = isNegative
+    self.isNegative = word == .zero ? false : isNegative
     self.data = [word]
   }
 
@@ -49,10 +49,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return "BigIntHeap(\(value))"
   }
 
-  // 'toString' because we Java now
   internal func toString(radix: Int, uppercase: Bool) -> String {
-    precondition(2 <= radix && radix <= 36, "radix must be in range 2...36")
-
     switch self.data.count {
     case 0:
       return "0"
@@ -137,7 +134,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     // Same sign and equal word count -> compare from most significant word
-    let indices = Swift.stride(from: lhs.data.count, through: 0, by: -1)
+    let indices = stride(from: lhs.data.count, through: 0, by: -1)
     for index in indices {
       let lhsWord = lhs.data[index]
       let rhsWord = rhs.data[index]

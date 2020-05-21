@@ -7,7 +7,7 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
 
   // MARK: - Properties
 
-  private let value: Storage
+  internal let value: Storage
 
   // MARK: - Init
 
@@ -43,7 +43,7 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case let .inline(smi):
       return smi.minus
     case let .heap(heap):
-      fatalError()
+      trap("")
     }
   }
 
@@ -52,7 +52,7 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case let .inline(smi):
       return smi.inverted
     case let .heap(heap):
-      fatalError()
+      trap("")
     }
   }
 
@@ -73,6 +73,21 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
       return smi.debugDescription
     case let .heap(heap):
       return heap.debugDescription
+    }
+  }
+
+  internal var bin: String {
+    return self.toString(radix: 2, uppercase: false)
+  }
+
+  // 'toString' because we Java now
+  internal func toString(radix: Int, uppercase: Bool) -> String {
+    precondition(2 <= radix && radix <= 36, "radix must be in range 2...36")
+    switch self.value {
+    case let .inline(smi):
+      return smi.toString(radix: radix, uppercase: uppercase)
+    case let .heap(heap):
+      return heap.toString(radix: radix, uppercase: uppercase)
     }
   }
 

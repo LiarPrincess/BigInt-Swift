@@ -1,3 +1,4 @@
+// swiftlint:disable:next unavailable_function
 public func trap(_ msg: String,
                  file: StaticString = #file,
                  function: StaticString = #function,
