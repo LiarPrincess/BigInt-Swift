@@ -57,7 +57,7 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
     return BigInt(smi: ~self.value)
   }
 
-  // MARK: - Binary operators
+  // MARK: - Add
 
   internal func add(other: Smi) -> BigInt {
     let (result, overflow) = self.value.addingReportingOverflow(other.value)
@@ -73,6 +73,10 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
       return BigInt(heap)
     }
 
+    return self.handleAddSubOverflow(result: result)
+  }
+
+  private func handleAddSubOverflow(result: Storage) -> BigInt {
     // If we were positive:
     // - we only can overflow into positive values
     // - 'result' is negative, but it is value is exactly as we want,
@@ -95,20 +99,18 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
     return BigInt(heap)
   }
 
-  private func twoComplement(value: Storage) -> Storage {
-    return (~value) &+ 1
-  }
-/*
+  // MARK: - Sub
+
   internal func sub(other: Smi) -> BigInt {
-    let result = self.value.subtractingReportingOverflow(other.value)
-    if !result.overflow {
-      return BigInt(Smi(result.partialValue))
+    let (result, overflow) = self.value.subtractingReportingOverflow(other.value)
+    if !overflow {
+      return BigInt(smi: result)
     }
 
-    // Zero - (-max)
-    fatalError()
+    return self.handleAddSubOverflow(result: result)
   }
 
+  // MARK: - Mul
 
 //  internal func mul(other: SmallInt) -> NBigInt {
 //    let result = self.value.multipliedFullWidth(by: other.value)
@@ -119,7 +121,6 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
 //
 //    fatalError()
 //  }
-*/
 
   // MARK: - String
 
