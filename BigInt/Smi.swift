@@ -1,5 +1,6 @@
 /// Small integer, named after similiar type in `V8`.
-internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConvertible {
+internal struct Smi:
+  Comparable, CustomStringConvertible, CustomDebugStringConvertible {
 
   internal typealias Storage = Int32
 
@@ -175,9 +176,23 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
   // MARK: - Mod
 
   internal func mod(other: Smi) -> BigInt {
-    let zelf = Int(self.value)
-    let other = Int(other.value)
-    return BigInt(zelf % other)
+    let (result, overflow) =
+      self.value.remainderReportingOverflow(dividingBy: other.value)
+
+    if !overflow {
+      return BigInt(smi: result)
+    }
+
+    // This has the same assumptions for overflow as 'div'.
+    // Please check 'div' for details.
+
+    if other.value == 0 {
+      _ = self.value % other.value // Well, hello there...
+    }
+
+    assert(self.value == Storage.min)
+    assert(other.value == Storage(-1))
+    return BigInt(smi: 0)
   }
 
   // MARK: - Bit operations
