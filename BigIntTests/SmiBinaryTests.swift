@@ -15,20 +15,9 @@ private let minPlus1 = min + 1
 
 class SmiBinaryTests: XCTestCase {
 
-  private typealias IntPair = (Storage, Storage)
-
-  private let smallIntPairs: [IntPair] = {
-    let smallInts: [Storage] = [-2, -1, 0, 1, 2]
-
-    var result = [IntPair]()
-    for lhs in smallInts {
-      for rhs in smallInts {
-        result.append(IntPair(lhs, rhs))
-      }
-    }
-
-    return result
-  }()
+  private let smallIntPairs = createAllPossiblePairVariants(
+    values: [-2, -1, 0, 1, 2].map(Storage.init)
+  )
 
   // MARK: - Add
 
@@ -46,9 +35,9 @@ class SmiBinaryTests: XCTestCase {
     self.addWithoutOverflow(minPlus1, -1, expecting: min)
   }
 
-  private func addWithoutOverflow(_ _lhs: Int32,
-                                  _ _rhs: Int32,
-                                  expecting: Int32? = nil,
+  private func addWithoutOverflow(_ _lhs: Storage,
+                                  _ _rhs: Storage,
+                                  expecting: Storage? = nil,
                                   file: StaticString = #file,
                                   line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -95,8 +84,8 @@ class SmiBinaryTests: XCTestCase {
     }
   }
 
-  private func addWithOverflow(_ _lhs: Int32,
-                               _ _rhs: Int32,
+  private func addWithOverflow(_ _lhs: Storage,
+                               _ _rhs: Storage,
                                file: StaticString = #file,
                                line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -138,9 +127,9 @@ class SmiBinaryTests: XCTestCase {
     self.subWithoutOverflow(-1, max, expecting: min)
   }
 
-  private func subWithoutOverflow(_ _lhs: Int32,
-                                  _ _rhs: Int32,
-                                  expecting: Int32? = nil,
+  private func subWithoutOverflow(_ _lhs: Storage,
+                                  _ _rhs: Storage,
+                                  expecting: Storage? = nil,
                                   file: StaticString = #file,
                                   line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -183,8 +172,8 @@ class SmiBinaryTests: XCTestCase {
     }
   }
 
-  private func subWithOverflow(_ _lhs: Int32,
-                               _ _rhs: Int32,
+  private func subWithOverflow(_ _lhs: Storage,
+                               _ _rhs: Storage,
                                file: StaticString = #file,
                                line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -227,9 +216,9 @@ class SmiBinaryTests: XCTestCase {
     }
   }
 
-  private func mulWithoutOverflow(_ _lhs: Int32,
-                                  _ _rhs: Int32,
-                                  expecting: Int32? = nil,
+  private func mulWithoutOverflow(_ _lhs: Storage,
+                                  _ _rhs: Storage,
+                                  expecting: Storage? = nil,
                                   file: StaticString = #file,
                                   line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -282,8 +271,8 @@ class SmiBinaryTests: XCTestCase {
     }
   }
 
-  private func mulWithOverflow(_ _lhs: Int32,
-                               _ _rhs: Int32,
+  private func mulWithOverflow(_ _lhs: Storage,
+                               _ _rhs: Storage,
                                file: StaticString = #file,
                                line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -329,9 +318,9 @@ class SmiBinaryTests: XCTestCase {
     }
   }
 
-  private func divWithoutOverflow(_ _lhs: Int32,
-                                  _ _rhs: Int32,
-                                  expecting: Int32? = nil,
+  private func divWithoutOverflow(_ _lhs: Storage,
+                                  _ _rhs: Storage,
+                                  expecting: Storage? = nil,
                                   file: StaticString = #file,
                                   line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -349,8 +338,8 @@ class SmiBinaryTests: XCTestCase {
     self.divWithOverflow(min, -1)
   }
 
-  private func divWithOverflow(_ _lhs: Int32,
-                               _ _rhs: Int32,
+  private func divWithOverflow(_ _lhs: Storage,
+                               _ _rhs: Storage,
                                file: StaticString = #file,
                                line: UInt = #line) {
     let lhs = Smi(_lhs)
@@ -392,9 +381,9 @@ class SmiBinaryTests: XCTestCase {
     }
   }
 
-  private func modWithoutOverflow(_ _lhs: Int32,
-                                  _ _rhs: Int32,
-                                  expecting: Int32? = nil,
+  private func modWithoutOverflow(_ _lhs: Storage,
+                                  _ _rhs: Storage,
+                                  expecting: Storage? = nil,
                                   file: StaticString = #file,
                                   line: UInt = #line) {
     let lhs = Smi(_lhs)

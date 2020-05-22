@@ -25,12 +25,12 @@ class SmiUnaryTests: XCTestCase {
     let minSmi = -2_147_483_648
     XCTAssert(Storage.min == minSmi)
 
-    guard let minSmi32 = Int32(exactly: minSmi) else {
+    guard let minSmiStorage = Storage(exactly: minSmi) else {
       XCTAssert(false, "Changed Smi.Storage?")
       return
     }
 
-    let smi = Smi(minSmi32)
+    let smi = Smi(minSmiStorage)
     let expected = BigInt(-minSmi)
     XCTAssertEqual(smi.minus, expected)
   }
