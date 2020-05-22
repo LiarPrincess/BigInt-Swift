@@ -152,9 +152,24 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
   // MARK: - Div
 
   internal func div(other: Smi) -> BigInt {
-    let zelf = Int(self.value)
-    let other = Int(other.value)
-    return BigInt(zelf / other)
+    let (result, overflow) = self.value.dividedReportingOverflow(by: other.value)
+    if !overflow {
+      return BigInt(smi: result)
+    }
+
+    // AFAIK we can overflow in 2 cases:
+    // - 'other' is 0 -> produce the same error as Swift
+    // - 'Storage.min / -1' -> value 1 greater than Storage.max
+
+    if other.value == 0 {
+      _ = self.value / other.value // Well, hello there...
+    }
+
+    assert(self.value == Storage.min)
+    assert(other.value == Storage(-1))
+    let word = BigIntHeap.Word(Storage.max) + 1
+    let heap = BigIntHeap(isNegative: false, word: word)
+    return BigInt(heap)
   }
 
   // MARK: - Mod

@@ -1,6 +1,8 @@
 import XCTest
 @testable import BigInt
 
+// swiftlint:disable file_length
+
 private typealias Storage = Smi.Storage
 
 private let max = Storage.max
@@ -13,12 +15,25 @@ private let minPlus1 = min + 1
 
 class SmiBinaryTests: XCTestCase {
 
-  private let smallInts: [Int32] = [-2, -1, 0, 1, 2]
+  private typealias IntPair = (Storage, Storage)
+
+  private let smallIntPairs: [IntPair] = {
+    let smallInts: [Storage] = [-2, -1, 0, 1, 2]
+
+    var result = [IntPair]()
+    for lhs in smallInts {
+      for rhs in smallInts {
+        result.append(IntPair(lhs, rhs))
+      }
+    }
+
+    return result
+  }()
 
   // MARK: - Add
 
   func test_add_withoutOverflow() {
-    for (lhs, rhs) in zip(self.smallInts, self.smallInts) {
+    for (lhs, rhs) in self.smallIntPairs {
       self.addWithoutOverflow(lhs, rhs)
     }
 
@@ -101,7 +116,7 @@ class SmiBinaryTests: XCTestCase {
   // MARK: - Sub
 
   func test_sub_withoutOverflow() {
-    for (lhs, rhs) in zip(self.smallInts, self.smallInts) {
+    for (lhs, rhs) in self.smallIntPairs {
       self.subWithoutOverflow(lhs, rhs)
     }
 
@@ -185,7 +200,7 @@ class SmiBinaryTests: XCTestCase {
   // MARK: - Mul
 
   func test_mul_withoutOverflow() {
-    for (lhs, rhs) in zip(self.smallInts, self.smallInts) {
+    for (lhs, rhs) in self.smallIntPairs {
       self.mulWithoutOverflow(lhs, rhs)
     }
 
@@ -204,9 +219,11 @@ class SmiBinaryTests: XCTestCase {
     self.mulWithoutOverflow(minPlus1, -1)
     self.mulWithoutOverflow(minHalf, -1)
 
-    for shift in 0...16 {
+    for shift in 0..<16 { // NOT including 16!
       let value = Int32(1 << shift)
       self.mulWithoutOverflow(1, value)
+      self.mulWithoutOverflow(2, value)
+      self.mulWithoutOverflow(3, value)
     }
   }
 
@@ -281,5 +298,68 @@ class SmiBinaryTests: XCTestCase {
     let rThingie = rhs.mul(other: lhs)
     XCTAssert(rThingie.isHeap, msg, file: file, line: line)
     XCTAssertEqual(rThingie, expected, msg, file: file, line: line)
+  }
+
+  // MARK: - Div
+
+  func test_div_withoutOverflow() {
+    for (lhs, rhs) in self.smallIntPairs {
+      if rhs == 0 {
+        continue
+      }
+
+      self.divWithoutOverflow(lhs, rhs)
+    }
+
+    self.divWithoutOverflow(max, 1)
+    self.divWithoutOverflow(maxHalf, 1)
+    self.divWithoutOverflow(min, 1)
+    self.divWithoutOverflow(minHalf, 1)
+
+    self.divWithoutOverflow(max, -1)
+    self.divWithoutOverflow(maxHalf, -1)
+    self.divWithoutOverflow(minPlus1, -1) // if we used 'min' -> overflow
+    self.divWithoutOverflow(minHalf, -1)
+
+    for shift in 0...16 {
+      let value = Int32(1 << shift)
+      self.divWithoutOverflow(value, 1)
+      self.divWithoutOverflow(value, 2)
+      self.divWithoutOverflow(value, 3)
+    }
+  }
+
+  private func divWithoutOverflow(_ _lhs: Int32,
+                                  _ _rhs: Int32,
+                                  expecting: Int32? = nil,
+                                  file: StaticString = #file,
+                                  line: UInt = #line) {
+    let lhs = Smi(_lhs)
+    let rhs = Smi(_rhs)
+    let expected = expecting.map(BigInt.init(smi:)) ?? BigInt(Int(_lhs) / Int(_rhs))
+    let msg = "\(lhs) / \(rhs)"
+
+    let lThingie = lhs.div(other: rhs)
+    XCTAssert(lThingie.isSmi, msg, file: file, line: line)
+    XCTAssertEqual(lThingie, expected, msg, file: file, line: line)
+  }
+
+  func test_div_min_by_minus1() {
+    // Storage.min / -1 -> value 1 greater than Storage.max
+    self.divWithOverflow(min, -1)
+  }
+
+  private func divWithOverflow(_ _lhs: Int32,
+                               _ _rhs: Int32,
+                               file: StaticString = #file,
+                               line: UInt = #line) {
+    let lhs = Smi(_lhs)
+    let rhs = Smi(_rhs)
+    let expected = BigInt(Int(_lhs) / Int(_rhs))
+    let msg = "\(lhs) / \(rhs)"
+
+    let lThingie = lhs.div(other: rhs)
+    XCTAssert(lThingie.isHeap, msg, file: file, line: line)
+    XCTAssertEqual(lThingie, expected, msg, file: file, line: line)
   }
 }
