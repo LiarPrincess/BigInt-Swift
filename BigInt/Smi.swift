@@ -39,7 +39,7 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
     self.value = storage
   }
 
-  // MARK: - Unary operators
+  // MARK: - Unary operations
 
   internal var minus: BigInt {
     // Binary numbers have bigger range on the negative side.
@@ -112,15 +112,72 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
 
   // MARK: - Mul
 
-//  internal func mul(other: SmallInt) -> NBigInt {
-//    let result = self.value.multipliedFullWidth(by: other.value)
-//    if result.high == 0 {
-//      let sign = result.high.s
-//      return NBigInt(diff.partialValue)
-//    }
-//
-//    fatalError()
-//  }
+  // `1` at front, `0` for the rest
+  private static let mostSignificantBitMask: Storage.Magnitude = {
+    let shift = Storage.Magnitude.bitWidth - 1
+    return 1 << shift
+  }()
+
+  /// `1` for all
+  private static let allOneMask: Storage = {
+    let allZero = Storage(0)
+    return ~allZero
+  }()
+
+  internal func mul(other: Smi) -> BigInt {
+    let (high, low) = self.value.multipliedFullWidth(by: other.value)
+
+    // Normally we could obtain the result by
+    // 'Int(high) << Storage.bitWidth | Int(low)',
+    // but even without doing this we know if we are in 'Smi' range or not.
+
+    // Positive smi
+    if high == 0 && (low & Smi.mostSignificantBitMask) == 0 {
+      let smi = Storage(bitPattern: low)
+      return BigInt(smi: smi)
+    }
+
+    // Negative smi
+    if high == Smi.allOneMask {
+      let smi = Storage(bitPattern: low)
+      return BigInt(smi: smi)
+    }
+
+    // Heap
+    let result = Int(high) << Storage.bitWidth | Int(low)
+    let heap = BigIntHeap(result)
+    return BigInt(heap)
+  }
+
+  // MARK: - Div
+
+  internal func div(other: Smi) -> BigInt {
+    let zelf = Int(self.value)
+    let other = Int(other.value)
+    return BigInt(zelf / other)
+  }
+
+  // MARK: - Mod
+
+  internal func mod(other: Smi) -> BigInt {
+    let zelf = Int(self.value)
+    let other = Int(other.value)
+    return BigInt(zelf % other)
+  }
+
+  // MARK: - Bit operations
+
+  internal func and(other: Smi) -> BigInt {
+    return BigInt(smi: self.value & other.value)
+  }
+
+  internal func or(other: Smi) -> BigInt {
+    return BigInt(smi: self.value | other.value)
+  }
+
+  internal func xor(other: Smi) -> BigInt {
+    return BigInt(smi: self.value ^ other.value)
+  }
 
   // MARK: - String
 
@@ -136,9 +193,25 @@ internal struct Smi: Comparable, CustomStringConvertible, CustomDebugStringConve
     return String(self.value, radix: radix, uppercase: uppercase)
   }
 
+  // MARK: - Equatable
+
+  internal static func == (lhs: Smi, rhs: Smi) -> Bool {
+    return lhs.value == rhs.value
+  }
+
   // MARK: - Comparable
 
   internal static func < (lhs: Smi, rhs: Smi) -> Bool {
     return lhs.value < rhs.value
+  }
+
+  // MARK: - Strideable
+
+  internal func distance(to other: Smi) -> BigInt {
+    return other.sub(other: self)
+  }
+
+  internal func advanced(by n: Smi) -> BigInt {
+    return self.add(other: n)
   }
 }

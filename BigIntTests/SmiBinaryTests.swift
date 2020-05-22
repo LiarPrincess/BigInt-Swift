@@ -13,11 +13,12 @@ private let minPlus1 = min + 1
 
 class SmiBinaryTests: XCTestCase {
 
+  private let smallInts: [Int32] = [-2, -1, 0, 1, 2]
+
   // MARK: - Add
 
   func test_add_withoutOverflow() {
-    let smallInts: [Int32] = [-2, -1, 0, 1, 2]
-    for (lhs, rhs) in zip(smallInts, smallInts) {
+    for (lhs, rhs) in zip(self.smallInts, self.smallInts) {
       self.addWithoutOverflow(lhs, rhs)
     }
 
@@ -100,8 +101,7 @@ class SmiBinaryTests: XCTestCase {
   // MARK: - Sub
 
   func test_sub_withoutOverflow() {
-    let smallInts: [Int32] = [-2, -1, 0, 1, 2]
-    for (lhs, rhs) in zip(smallInts, smallInts) {
+    for (lhs, rhs) in zip(self.smallInts, self.smallInts) {
       self.subWithoutOverflow(lhs, rhs)
     }
 
@@ -180,5 +180,106 @@ class SmiBinaryTests: XCTestCase {
     let thingie = lhs.sub(other: rhs)
     XCTAssert(thingie.isHeap, msg, file: file, line: line)
     XCTAssertEqual(thingie, expected, msg, file: file, line: line)
+  }
+
+  // MARK: - Mul
+
+  func test_mul_withoutOverflow() {
+    for (lhs, rhs) in zip(self.smallInts, self.smallInts) {
+      self.mulWithoutOverflow(lhs, rhs)
+    }
+
+    self.mulWithoutOverflow(max, 0)
+    self.mulWithoutOverflow(maxHalf, 0)
+    self.mulWithoutOverflow(min, 0)
+    self.mulWithoutOverflow(minHalf, 0)
+
+    self.mulWithoutOverflow(max, 1)
+    self.mulWithoutOverflow(maxHalf, 1)
+    self.mulWithoutOverflow(min, 1)
+    self.mulWithoutOverflow(minHalf, 1)
+
+    self.mulWithoutOverflow(max, -1)
+    self.mulWithoutOverflow(maxHalf, -1)
+    self.mulWithoutOverflow(minPlus1, -1)
+    self.mulWithoutOverflow(minHalf, -1)
+
+    for shift in 0...16 {
+      let value = Int32(1 << shift)
+      self.mulWithoutOverflow(1, value)
+    }
+  }
+
+  private func mulWithoutOverflow(_ _lhs: Int32,
+                                  _ _rhs: Int32,
+                                  expecting: Int32? = nil,
+                                  file: StaticString = #file,
+                                  line: UInt = #line) {
+    let lhs = Smi(_lhs)
+    let rhs = Smi(_rhs)
+    let expected = expecting.map(BigInt.init(smi:)) ?? BigInt(Int(_lhs) * Int(_rhs))
+    let msg = "\(lhs) * \(rhs)"
+
+    let lThingie = lhs.mul(other: rhs)
+    XCTAssert(lThingie.isSmi, msg, file: file, line: line)
+    XCTAssertEqual(lThingie, expected, msg, file: file, line: line)
+
+    let rThingie = rhs.mul(other: lhs)
+    XCTAssert(rThingie.isSmi, msg, file: file, line: line)
+    XCTAssertEqual(rThingie, expected, msg, file: file, line: line)
+  }
+
+  func test_mul_overflow_positive() {
+    self.mulWithOverflow(max, max)
+    self.mulWithOverflow(min, min)
+
+    self.mulWithOverflow(max, maxMinus1)
+    self.mulWithOverflow(max, maxHalf)
+    self.mulWithOverflow(min, minPlus1)
+    self.mulWithOverflow(min, minHalf)
+
+    let testCount = Storage(128)
+    let step = max / testCount
+
+    for i in 1..<testCount {
+      let other = -i * step
+      self.mulWithOverflow(max, other)
+    }
+  }
+
+  func test_mul_overflow_negative() {
+    self.mulWithOverflow(max, min)
+    self.mulWithOverflow(min, max)
+
+    self.mulWithOverflow(max, minPlus1)
+    self.mulWithOverflow(max, minHalf)
+    self.mulWithOverflow(min, maxMinus1)
+    self.mulWithOverflow(min, maxHalf)
+
+    let testCount = Storage(128)
+    let step = max / testCount
+
+    for i in 1..<testCount {
+      let other = i * step
+      self.mulWithOverflow(min, other)
+    }
+  }
+
+  private func mulWithOverflow(_ _lhs: Int32,
+                               _ _rhs: Int32,
+                               file: StaticString = #file,
+                               line: UInt = #line) {
+    let lhs = Smi(_lhs)
+    let rhs = Smi(_rhs)
+    let expected = BigInt(Int(_lhs) * Int(_rhs))
+    let msg = "\(lhs) * \(rhs)"
+
+    let lThingie = lhs.mul(other: rhs)
+    XCTAssert(lThingie.isHeap, msg, file: file, line: line)
+    XCTAssertEqual(lThingie, expected, msg, file: file, line: line)
+
+    let rThingie = rhs.mul(other: lhs)
+    XCTAssert(rThingie.isHeap, msg, file: file, line: line)
+    XCTAssertEqual(rThingie, expected, msg, file: file, line: line)
   }
 }

@@ -5,6 +5,16 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case heap(BigIntHeap)
   }
 
+  public static func checkInvariants() {
+    guard MemoryLayout<BigInt>.stride == 8 else {
+      trap("[BigInt] Expected 'BigInt' to have 8 bytes.")
+    }
+
+    guard Int.bitWidth > Smi.Storage.bitWidth else {
+      trap("[BigInt] Expected native 'Int' to be wider than 'Smi'.")
+    }
+  }
+
   // MARK: - Properties
 
   internal let value: Storage
