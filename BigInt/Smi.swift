@@ -1,4 +1,5 @@
 // swiftlint:disable empty_count
+// swiftlint:disable file_length
 
 /// Small integer, named after similiar type in `V8`.
 internal struct Smi:
@@ -255,15 +256,24 @@ internal struct Smi:
       return BigInt(smi: result)
     }
 
+    // TODO: Implement left shift smi->heap.
     fatalError()
   }
 
   // MARK: - Shift right
 
   internal func shiftRight<T: BinaryInteger>(count: T) -> BigInt {
-    // Is mul by 2 bigger than Smi?
-    //    self.value.leadingZeroBitCount
-    fatalError()
+    if count == 0 {
+      return BigInt(smi: self.value)
+    }
+
+    if count < 0 {
+      // Magnitude, because '-' could overflow
+      return self.shiftLeft(count: count.magnitude)
+    }
+
+    let result = self.value >> count
+    return BigInt(smi: result)
   }
 
   // MARK: - String
