@@ -15,7 +15,7 @@ private let minPlus1 = min + 1
 
 class SmiBinaryTests: XCTestCase {
 
-  private let smallIntPairs = createAllPossiblePairVariants(
+  private let smallIntPairs = allPossiblePairings(
     values: [-2, -1, 0, 1, 2].map(Storage.init)
   )
 

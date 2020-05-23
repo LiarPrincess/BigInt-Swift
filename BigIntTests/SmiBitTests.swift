@@ -25,7 +25,7 @@ private let alternating10 = ~alternating01
 
 class SmiBtTests: XCTestCase {
 
-  private let valuePairs = createAllPossiblePairVariants(
+  private let valuePairs = allPossiblePairings(
     values: [all0, all1, alternating01, alternating10]
   )
 

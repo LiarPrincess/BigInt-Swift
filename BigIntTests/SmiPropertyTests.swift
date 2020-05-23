@@ -71,22 +71,20 @@ class SmiPropertyTests: XCTestCase {
     self.minRequiredWidth(all0, minRequiredWidth: 0)
     self.minRequiredWidth(all1, minRequiredWidth: 1) // -1 requires 1 bit
 
-    // Positive numbers
-    for i in 0..<(Storage.bitWidth - 1) {
+    for (power, value) in allPositivePowersOf2(type: Storage.self) {
       // >>> for i in range(1, 10):
       // ...     value = 1 << i
-      // ...     print(i, value.bit_length())
-      //
-      // 1 2
-      // 2 3
-      // 3 4
-      let value = Storage(1 << i)
-      let minRequiredWidth = i + 1
+      // ...     print(i, value, value.bit_length())
+      // ...
+      // 1 2 2
+      // 2 4 3
+      // 3 8 4
+      // 4 16 5
+      let minRequiredWidth = power + 1
       self.minRequiredWidth(value, minRequiredWidth: minRequiredWidth)
     }
 
-    // Negative numbers
-    for i in 0..<(Storage.bitWidth - 1) {
+    for (power, value) in allNegativePowersOf2(type: Storage.self) {
       // >>> for i in range(1, 10):
       // ...     value = 1 << i
       // ...     print(i, (-value).bit_length())
@@ -95,9 +93,7 @@ class SmiPropertyTests: XCTestCase {
       // 2 3
       // 3 4
       // (etc)
-      let value = -Storage(1 << i)
-      print(i, bin(value), value)
-      let minRequiredWidth = i + 1
+      let minRequiredWidth = power + 1
       self.minRequiredWidth(value, minRequiredWidth: minRequiredWidth)
     }
   }

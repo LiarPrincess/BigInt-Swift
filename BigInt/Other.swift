@@ -6,6 +6,14 @@ internal func bin(_ value: UInt32) -> String {
   return String(value, radix: 2, uppercase: false)
 }
 
+internal func bin(_ value: Int) -> String {
+  return bin(UInt(bitPattern: value))
+}
+
+internal func bin(_ value: UInt) -> String {
+  return String(value, radix: 2, uppercase: false)
+}
+
 // swiftlint:disable:next unavailable_function
 public func trap(_ msg: String,
                  file: StaticString = #file,

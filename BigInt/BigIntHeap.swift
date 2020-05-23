@@ -13,7 +13,11 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   private let data: [Word]
 
   /// A Boolean value indicating whether this instance is negative.
-  private let isNegative: Bool
+  internal let isNegative: Bool
+
+  internal var isPositive: Bool {
+    return !self.isNegative
+  }
 
   private var count: Int {
     return self.data.count
@@ -151,5 +155,28 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     return false
+  }
+
+  // MARK: - As smi
+
+  internal func asSmiIfPossible() -> Smi? {
+    guard self.count == 1 else {
+      return nil
+    }
+
+    let maxSmiSigned = self.isNegative ? Smi.Storage.min : Smi.Storage.max
+    let maxSmiUnsigned = maxSmiSigned.magnitude
+
+    let unsignedValue = self.data[0]
+    guard unsignedValue <= maxSmiUnsigned else {
+      return nil
+    }
+
+    // Ok, we are in range
+    // We cannot do calculations in 'Smi.Storage',
+    // because if are were 'min' then we would overfow
+    let sign = self.isNegative ? -1 : 1
+    let value = sign * Int(unsignedValue)
+    return Smi(Smi.Storage(value))
   }
 }

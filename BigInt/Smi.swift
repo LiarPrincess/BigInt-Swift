@@ -1,3 +1,5 @@
+// swiftlint:disable empty_count
+
 /// Small integer, named after similiar type in `V8`.
 internal struct Smi:
   Comparable, CustomStringConvertible, CustomDebugStringConvertible {
@@ -24,6 +26,10 @@ internal struct Smi:
 
   internal var isNegative: Bool {
     return self.value < Storage(0)
+  }
+
+  internal var isPositive: Bool {
+    return !self.isNegative
   }
 
   /// Number of bits necessary to represent self in binary.
@@ -219,6 +225,45 @@ internal struct Smi:
 
   internal func xor(other: Smi) -> BigInt {
     return BigInt(smi: self.value ^ other.value)
+  }
+
+  // MARK: - Shift left
+
+  internal func shiftLeft<T: BinaryInteger>(count: T) -> BigInt {
+    if count == 0 {
+      return BigInt(smi: self.value)
+    }
+
+    if count < 0 {
+      // Magnitude, because '-' could overflow
+      return self.shiftRight(count: count.magnitude)
+    }
+
+    let maxShiftInsideSmi: Int
+    if self.isPositive {
+      let leadingZeroBitCount = self.value.leadingZeroBitCount
+      let excludeMostSignificantBit = 1
+      maxShiftInsideSmi = leadingZeroBitCount - excludeMostSignificantBit
+    } else {
+      // We are perfectly 'ok' with using msb
+      let inverted = ~self.value
+      maxShiftInsideSmi = inverted.leadingZeroBitCount
+    }
+
+    if count <= maxShiftInsideSmi {
+      let result = self.value << count
+      return BigInt(smi: result)
+    }
+
+    fatalError()
+  }
+
+  // MARK: - Shift right
+
+  internal func shiftRight<T: BinaryInteger>(count: T) -> BigInt {
+    // Is mul by 2 bigger than Smi?
+    //    self.value.leadingZeroBitCount
+    fatalError()
   }
 
   // MARK: - String
