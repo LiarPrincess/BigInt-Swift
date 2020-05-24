@@ -22,7 +22,7 @@ internal struct Smi:
   internal let value: Storage
 
   internal var isZero: Bool {
-    return self.value == .zero
+    return self.value.isZero
   }
 
   internal var isNegative: Bool {
