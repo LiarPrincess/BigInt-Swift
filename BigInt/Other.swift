@@ -36,3 +36,18 @@ extension BinaryInteger {
     return self < .zero
   }
 }
+
+extension FixedWidthInteger {
+
+  /// Number of bits necessary to represent self in binary.
+  /// `bitLength` in Python.
+  internal var minRequiredWidth: Int {
+    if self >= .zero {
+      return self.bitWidth - self.leadingZeroBitCount
+    }
+
+    let sign = 1
+    let inverted = ~self
+    return self.bitWidth - inverted.leadingZeroBitCount + sign
+  }
+}

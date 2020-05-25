@@ -33,16 +33,8 @@ internal struct Smi:
     return !self.isNegative
   }
 
-  /// Number of bits necessary to represent self in binary.
-  /// `bitLength` in Python.
   internal var minRequiredWidth: Int {
-    if self.value >= 0 {
-      return Storage.bitWidth - self.value.leadingZeroBitCount
-    }
-
-    let sign = 1
-    let inverted = ~self.value
-    return Storage.bitWidth - inverted.leadingZeroBitCount + sign
+    return self.value.minRequiredWidth
   }
 
   // MARK: - Init

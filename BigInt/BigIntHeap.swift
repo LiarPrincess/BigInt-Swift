@@ -32,7 +32,14 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return self.data.count
   }
 
-  // TODO: minRequiredWidth
+  internal var minRequiredWidth: Int {
+    guard let last = self.data.last else {
+      return (0).minRequiredWidth
+    }
+
+    let widthWithoutLast = (self.count - 1) * Word.bitWidth
+    return widthWithoutLast + last.minRequiredWidth
+  }
 
   // MARK: - Init
 
