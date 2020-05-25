@@ -101,13 +101,13 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
     if self.isZero {
       let word = Word(other.magnitude)
-      self.isNegative = other.isNegative
       self.data = [word]
+      self.isNegative = other.isNegative
       return
     }
 
     if self.isNegative == other.isNegative {
-      self.addSameSign(other: other)
+      Self.addMagnitude(lhs: &self.data, rhs: other)
       return
     }
 
@@ -127,28 +127,32 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     self.fixInvariants()
   }
 
-  /// Both are positive or both are negative.
-  private func addSameSign<T: BinaryInteger>(other _other: T) {
-    // swiftlint:disable:next empty_count
-    assert(self.data.count != 0, "0 should be handled earlier")
+  private static func addMagnitude<T: BinaryInteger>(lhs: inout [Word], rhs: T) {
+    if rhs.isZero {
+      return
+    }
+
+    let rhsWord = Word(rhs.magnitude)
+
+    if lhs.isEmpty {
+      lhs.append(rhsWord)
+      return
+    }
 
     var carry: Word
-    let other = Word(_other.magnitude)
-    (carry, self.data[0]) = Self.add(self.data[0], other)
+    (carry, lhs[0]) = Self.add(lhs[0], rhsWord)
 
-    for i in 1..<data.count {
+    for i in 1..<lhs.count {
       guard carry > 0 else {
         break
       }
 
-      (carry, self.data[i]) = Self.add(self.data[i], other)
+      (carry, lhs[i]) = Self.add(lhs[i], carry)
     }
 
     if carry > 0 {
-      self.data.append(1)
+      lhs.append(1)
     }
-
-    // No need to fix invariants
   }
 
   internal func add(other: BigIntHeap) {
@@ -249,7 +253,72 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   // MARK: - Sub
 
   internal func sub<T: BinaryInteger>(other: T) {
-    fatalError()
+    defer { self.checkInvariants() }
+
+    if other.isZero {
+      return
+    }
+
+    if self.isZero {
+      let word = Word(other.magnitude)
+      self.data = [word]
+      self.isNegative = !other.isNegative
+      return
+    }
+
+    // We can simply add magnitudes when:
+    // - self.isNegative && other.isPositive (for example: -5 - 6 = -11)
+    // - self.isPositive && other.isNegative (for example:  5 - (-6) = 5 + 6 = 11)
+    // which is the same as:
+    if self.isNegative != other.isNegative {
+      Self.addMagnitude(lhs: &self.data, rhs: other)
+      return
+    }
+
+    // Both have the same sign, for example '1 - 1' or '-2 - (-3)'.
+    // That means that we may need to cross 0.
+    switch Self.compareMagnitudes(lhs: self, rhs: other) {
+    case .equal: // 1 - 1
+      self.setToZero()
+    case .less: // 1 - 2
+      // Biggest Swift 'BinaryInteger' type is [U]Int64.
+      // Its magnitude is in range of our 'Word', so we can simply:
+      let otherMagnitude = Word(other.magnitude)
+
+      assert(self.data[0] < otherMagnitude)
+      let result = otherMagnitude - self.data[0]
+
+      self.data = [result]
+      self.isNegative.toggle() // We crossed 0
+
+    case .greater: // 2 - 1
+      Self.subMagnitude(bigger: &self.data, smaller: other)
+    }
+  }
+
+  private static func subMagnitude<T: BinaryInteger>(bigger: inout [Word],
+                                                     smaller: T) {
+    if smaller.isZero {
+      return
+    }
+
+    let smallerWord = Word(smaller.magnitude)
+
+    if bigger.isEmpty {
+      bigger.append(smallerWord)
+      return
+    }
+
+    var carry: Word
+    (carry, bigger[0]) = Self.sub(bigger[0], smallerWord)
+
+    for i in 1..<bigger.count {
+      // No more action needed if there's nothing to carry
+      if carry == 0 { break }
+      (carry, bigger[i]) = Self.sub(bigger[i], carry)
+    }
+
+    assert(carry == 0)
   }
 
   internal func sub(other: BigIntHeap) {
@@ -262,8 +331,8 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     if self.isZero {
       let otherCopy = other.copy()
       otherCopy.negate()
-      self.isNegative = otherCopy.isNegative
       self.data = otherCopy.data
+      self.isNegative = otherCopy.isNegative
       return
     }
 
@@ -360,15 +429,13 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return false
     }
 
-    // If we have more words than 1 then we are our of range of smi
-    guard heap.count == 1 else {
+    switch Self.compareMagnitudes(lhs: heap, rhs: smi.value) {
+    case .equal:
+      return true
+    case .less,
+         .greater:
       return false
     }
-
-    // We have the same sign and only 1 word in heap -> compare them
-    let word = heap.data[0]
-    let smiAbs = smi.value.magnitude
-    return word == smiAbs
   }
 
   internal static func == (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
@@ -383,15 +450,13 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return smi.isNegative
     }
 
-    // If we have more words than 1 then we are our of range of smi
-    guard heap.count == 1 else {
+    switch Self.compareMagnitudes(lhs: heap, rhs: smi.value) {
+    case .equal,
+         .greater:
       return true
+    case .less:
+      return false
     }
-
-    // We have the same sign and only 1 word in heap -> compare them
-    let word = heap.data[0]
-    let smiAbs = smi.value.magnitude
-    return word >= smiAbs
   }
 
   internal static func < (heap: BigIntHeap, smi: Smi) -> Bool {
@@ -400,15 +465,13 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return heap.isNegative
     }
 
-    // If we have more words than 1 then we are our of range of smi
-    guard heap.count == 1 else {
+    switch Self.compareMagnitudes(lhs: heap, rhs: smi.value) {
+    case .less:
+      return true
+    case .equal,
+         .greater:
       return false
     }
-
-    // We have the same sign and only 1 word in heap -> compare them
-    let word = heap.data[0]
-    let smiAbs = smi.value.magnitude
-    return word < smiAbs
   }
 
   internal static func < (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
@@ -430,6 +493,23 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     case equal
     case less
     case greater
+  }
+
+  private static func compareMagnitudes<T: BinaryInteger>(
+    lhs: BigIntHeap,
+    rhs: T
+  ) -> CompareMagnitudes {
+    // If we have more words than 1 then we are our of range of smi
+    if lhs.count > 1 {
+      return .greater
+    }
+
+    // We have only 1 word in heap -> compare with value
+    let lhsWord = lhs.data[0]
+    let rhsWord = Word(rhs.magnitude)
+    return lhsWord == rhsWord ? .equal :
+           lhsWord > rhsWord ? .greater :
+          .less
   }
 
   private static func compareMagnitudes(lhs: BigIntHeap,
