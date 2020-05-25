@@ -151,7 +151,81 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   }
 
   internal func add(other: BigIntHeap) {
-    fatalError()
+    defer { self.checkInvariants() }
+
+    if other.isZero {
+      return
+    }
+
+    if self.isZero {
+      self.isNegative = other.isNegative
+      self.data = other.data
+      return
+    }
+
+    if self.isNegative == other.isNegative {
+      self.addSameSign(other: other)
+      return
+    }
+
+    // Self positive, other negative: x + (-y) = x - y
+    if self.isPositive {
+      assert(other.isNegative)
+      self.sub(other: other)
+      return
+    }
+
+    // Self negative, other positive:  -x + y = -(x - y)
+    assert(self.isNegative && other.isPositive)
+    self.negate()
+    self.sub(other: other)
+    self.negate()
+    self.fixInvariants()
+  }
+
+  /// Both are positive or both are negative.
+  ///
+  /// Basically 1:1 copy from Swift code (see top of this file for link).
+  private func addSameSign(other: BigIntHeap) {
+    let commonCount = Swift.min(self.data.count, other.data.count)
+    let maxCount = Swift.max(self.data.count, other.data.count)
+    self.data.reserveCapacity(maxCount)
+
+    // Add the words up to the common count, carrying any overflows
+    var carry: Word = 0
+    for i in 0..<commonCount {
+      (carry, self.data[i]) = Self.add(self.data[i], other.data[i], carry)
+    }
+
+    // If there are leftover words in 'self', just need to handle any carries
+    if self.data.count > other.data.count {
+      for i in commonCount..<maxCount {
+        // No more action needed if there's nothing to carry
+        if carry == 0 { break }
+        (carry, self.data[i]) = BigIntHeap.add(self.data[i], carry)
+      }
+    }
+    // If there are leftover words in 'other', need to copy to 'self' with carries
+    else {
+      for i in commonCount..<maxCount {
+        // Append remaining words if nothing to carry
+        if carry == 0 {
+          self.data.append(contentsOf: other.data.suffix(from: i))
+          break
+        }
+
+        let partialResult: Word
+        (carry, partialResult) = BigIntHeap.add(other.data[i], carry)
+        self.data.append(partialResult)
+      }
+    }
+
+    // If there's any carry left, add it now
+    if carry != 0 {
+      self.data.append(1)
+    }
+
+    // No need to fix invariants
   }
 
   private typealias PartialAddResult = (carry: Word, result: Word)
