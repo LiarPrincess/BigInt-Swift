@@ -18,7 +18,7 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
 
   // MARK: - Properties
 
-  internal let value: Storage
+  internal private(set) var value: Storage
 
   // MARK: - Init
 
@@ -58,7 +58,9 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case let .smi(smi):
       return smi.minus
     case let .heap(heap):
-      return heap.minus
+      let copy = heap.copy()
+      copy.negate()
+      return copy.asNormalizedBigInt
     }
   }
 
@@ -67,38 +69,103 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case let .smi(smi):
       return smi.inverted
     case let .heap(heap):
-      return heap.inverted
+      let copy = heap.copy()
+      copy.invert()
+      return copy.asNormalizedBigInt
     }
   }
 
-  // MARK: - Binary operators
+  // MARK: - Add
 
   public static func + (lhs: BigInt, rhs: BigInt) -> BigInt {
     switch (lhs.value, rhs.value) {
     case let (.smi(lhs), .smi(rhs)):
       return lhs.add(other: rhs)
+
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      return heap.add(other: smi.value)
+      let copy = heap.copy()
+      copy.add(other: smi.value)
+      return copy.asNormalizedBigInt
+
     case let (.heap(lhs), .heap(rhs)):
-      return lhs.add(other: rhs)
+      let copy = lhs.copy()
+      copy.add(other: rhs)
+      return copy.asNormalizedBigInt
     }
   }
+
+  // TODO: If we are heap, them maybe we can downgrade?
+
+  public static func += (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.add(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      // Unfortunately in this case we have to copy rhs
+      let rhsCopy = rhs.copy()
+      rhsCopy.add(other: lhsSmi.value)
+      lhs.value = .heap(rhsCopy)
+
+    case let (.heap(lhs), .smi(rhs)):
+      lhs.add(other: rhs.value)
+
+    case let (.heap(lhs), .heap(rhs)):
+      lhs.add(other: rhs)
+    }
+  }
+
+  // MARK: - Sub
 
   public static func - (lhs: BigInt, rhs: BigInt) -> BigInt {
     switch (lhs.value, rhs.value) {
     case let (.smi(lhs), .smi(rhs)):
       return lhs.sub(other: rhs)
+
     case let (.smi(lhs), .heap(rhs)):
-      // x - y = -y + x
-      let minusRhs = rhs.minus
-      return minusRhs + lhs.value
+      // x - y = x + (-y) = (-y) + x
+      let rhsCopy = rhs.copy()
+      rhsCopy.negate()
+      rhsCopy.add(other: lhs.value)
+      return rhsCopy.asNormalizedBigInt
+
     case let (.heap(lhs), .smi(rhs)):
-      return lhs.sub(other: rhs.value)
+      let copy = lhs.copy()
+      copy.sub(other: rhs.value)
+      return copy.asNormalizedBigInt
+
     case let (.heap(lhs), .heap(rhs)):
-      return lhs.sub(other: rhs)
+      let copy = lhs.copy()
+      copy.sub(other: rhs)
+      return copy.asNormalizedBigInt
     }
   }
+
+  public static func -= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.sub(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      // Unfortunately in this case we have to copy rhs
+      // x - y = x + (-y) = (-y) + x
+      let rhsCopy = rhs.copy()
+      rhsCopy.negate()
+      rhsCopy.add(other: lhsSmi.value)
+      lhs.value = .heap(rhsCopy)
+
+    case let (.heap(lhs), .smi(rhs)):
+      lhs.sub(other: rhs.value)
+
+    case let (.heap(lhs), .heap(rhs)):
+      lhs.sub(other: rhs)
+    }
+  }
+
+  // MARK: - Add/sub to remove
 
   // Not needed if we conform to Binary int
   public static func +<T: BinaryInteger> (lhs: BigInt, rhs: T) -> BigInt { fatalError() }
@@ -213,17 +280,12 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
   // MARK: - Normalization
 
   /// Convert to `smi` if possible.
-  internal func normalized() -> BigInt {
+  private func normalized() -> BigInt {
     switch self.value {
     case .smi:
       return self
-
     case .heap(let heap):
-      guard let smi = heap.asSmiIfPossible() else {
-        return self
-      }
-
-      return BigInt(smi)
+      return heap.asNormalizedBigInt
     }
   }
 }

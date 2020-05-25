@@ -1,6 +1,8 @@
 // A lot of this code was taken from:
 // https://github.com/apple/swift/blob/master/test/Prototypes/BigInt.swift
 
+// swiftlint:disable file_length
+
 // TODO: Make it struct and store pointer to buffer, value at 0 will be count
 internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStringConvertible {
 
@@ -13,10 +15,10 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   ///
   /// - `data` has no trailing zero elements
   /// - If `self == 0`, then `isNegative == false` and `data == []`
-  private let data: [Word]
+  internal private(set) var data: [Word]
 
   /// A Boolean value indicating whether this instance is negative.
-  internal let isNegative: Bool
+  internal private(set) var isNegative: Bool
 
   internal var isPositive: Bool {
     return !self.isNegative
@@ -38,35 +40,18 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     // Zero is always positive
     self.isNegative = word.isZero ? false : isNegative
     self.data = [word]
+    self.checkInvariants()
   }
 
-  internal init(isNegative: Bool, data _data: [Word]) {
-    let data = Self.trimPrefixZeros(data: _data)
+  internal init(isNegative: Bool, data: [Word]) {
+    var dataCopy = data
+    Self.trimPrefixZeros(data: &dataCopy)
 
     // Zero is always positive
-    self.isNegative = data.isEmpty ? false : isNegative
-    self.data = data
-  }
+    self.isNegative = dataCopy.isEmpty ? false : isNegative
+    self.data = dataCopy
 
-  private static func trimPrefixZeros(data: [Word]) -> [Word] {
-    // Empty -> return empty
-    guard let last = data.last else {
-      return data
-    }
-
-    // If last is not 0 -> no trimming needed
-    if !last.isZero {
-      return data
-    }
-
-    // Go from the back and try to find non zero
-    if let lastNonZeroIndex = data.lastIndex(where: { !$0.isZero }) {
-      let result = data[0...lastNonZeroIndex]
-      return Array(result)
-    }
-
-    // All are 0
-    return []
+    self.checkInvariants()
   }
 
   internal init<T: BinaryInteger>(_ value: T) {
@@ -80,85 +65,92 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     self.data = [word]
+    self.checkInvariants()
   }
 
   // MARK: - Unary operations
 
-  /// Guaranteed to never allocate new array
-  internal var minus: BigInt {
+  internal func negate() {
+    defer { self.checkInvariants() }
+
     if self.isZero {
-      return BigInt(self)
+      return
     }
 
-    let heap = BigIntHeap(isNegative: !self.isNegative, data: self.data)
-    return BigInt(heap)
+    self.isNegative.toggle()
+    self.fixInvariants()
   }
 
-  internal var inverted: BigInt {
-    // -x - 1
-    let minusSelf = self.minus
-    return minusSelf - 1
+  internal func invert() {
+    defer { self.checkInvariants() }
+
+    // ~x = -x - 1
+    self.negate()
+    self.sub(other: 1)
+    self.fixInvariants()
   }
 
   // MARK: - Add
 
-  // TODO: We can go back to smi if we are going down!
+  internal func add<T: BinaryInteger>(other: T) {
+    defer { self.checkInvariants() }
 
-  internal func add<T: BinaryInteger>(other: T) -> BigInt {
     if other.isZero {
-      return BigInt(self)
+      return
     }
 
     if self.isZero {
-      return BigInt(other)
+      let word = Word(other.magnitude)
+      self.isNegative = other.isNegative
+      self.data = [word]
+      return
     }
 
-    // Same sign
     if self.isNegative == other.isNegative {
-      return self.addSameSign(other: other)
+      self.addSameSign(other: other)
+      return
     }
 
     // Self positive, other negative: x + (-y) = x - y
-    if other.isNegative {
-      assert(self.isPositive)
-      // Just using '-' may overflow!
-      return self.sub(other: other.magnitude)
+    if self.isPositive {
+      assert(other.isNegative)
+      self.sub(other: other.magnitude) // Just using '-' may overflow!
+      return
     }
 
     // Self negative, other positive:  -x + y = -(x - y)
     assert(self.isNegative && other.isPositive)
-    let minusSelf = self.minus
-    let partial = minusSelf - other
-    return -partial
+    self.negate()
+    self.sub(other: other)
+    self.negate()
+    self.fixInvariants()
   }
 
   /// Both are positive or both are negative.
-  private func addSameSign<T: BinaryInteger>(other _other: T) -> BigInt {
+  private func addSameSign<T: BinaryInteger>(other _other: T) {
     // swiftlint:disable:next empty_count
     assert(self.data.count != 0, "0 should be handled earlier")
-    let other = Word(_other.magnitude)
 
     var carry: Word
-    var data = self.data
-    (carry, data[0]) = Self.add(data[0], other)
+    let other = Word(_other.magnitude)
+    (carry, self.data[0]) = Self.add(self.data[0], other)
 
     for i in 1..<data.count {
       guard carry > 0 else {
         break
       }
 
-      (carry, data[i]) = Self.add(data[i], other)
+      (carry, self.data[i]) = Self.add(self.data[i], other)
     }
 
     if carry > 0 {
-      data.append(1)
+      self.data.append(1)
     }
 
-    let heap = BigIntHeap(isNegative: self.isNegative, data: data)
-    return BigInt(heap)
+    // No need to fix invariants
   }
 
-  internal func add(other: BigIntHeap) -> BigInt {
+  internal func add(other: BigIntHeap) {
     fatalError()
   }
 
@@ -179,11 +171,11 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
   // MARK: - Sub
 
-  internal func sub<T: BinaryInteger>(other: T) -> BigInt {
+  internal func sub<T: BinaryInteger>(other: T) {
     fatalError()
   }
 
-  internal func sub(other: BigIntHeap) -> BigInt {
+  internal func sub(other: BigIntHeap) {
     fatalError()
   }
 
@@ -302,21 +294,49 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return false
   }
 
-  // MARK: - Check invariants
+  // MARK: - Invariants
 
-  // TODO: Uncomment 'checkInvariants'
-//  private func checkInvariants(source: StaticString = #function) {
-//    if let last = self.data.last {
-//      assert(last != 0, "\(source): zero prefix in BigInt")
-//    } else {
-//      // 'self.data' is empty
-//      assert(self.isNegative == false, "\(source): isNegative with empty data")
-//    }
-//  }
+  private func fixInvariants() {
+    Self.trimPrefixZeros(data: &self.data)
 
-  // MARK: - As smi
+    // Zero is always positive
+    if self.data.isEmpty {
+      self.isNegative = false
+    }
+  }
 
-  internal func asSmiIfPossible() -> Smi? {
+  private static func trimPrefixZeros(data: inout [Word]) {
+    while let last = data.last, last.isZero {
+      data.removeLast()
+    }
+  }
+
+  private func checkInvariants(source: StaticString = #function) {
+    if let last = self.data.last {
+      assert(last != 0, "\(source): zero prefix in BigInt")
+    } else {
+      // 'self.data' is empty
+      assert(self.isNegative == false, "\(source): isNegative with empty data")
+    }
+  }
+
+  // MARK: - Copy
+
+  internal func copy() -> BigIntHeap {
+    return BigIntHeap(isNegative: self.isNegative, data: self.data)
+  }
+
+  // MARK: - Type conversion
+
+  internal var asNormalizedBigInt: BigInt {
+    if let smi = self.asSmi {
+      return BigInt(smi)
+    }
+
+    return BigInt(self)
+  }
+
+  private var asSmi: Smi? {
     guard self.count == 1 else {
       return nil
     }
