@@ -114,7 +114,8 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     // Self positive, other negative: x + (-y) = x - y
     if self.isPositive {
       assert(other.isNegative)
-      self.sub(other: other.magnitude) // Just using '-' may overflow!
+      let otherPositive = other.magnitude // Just using '-' may overflow!
+      self.sub(other: otherPositive)
       return
     }
 
@@ -163,15 +164,18 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return
     }
 
+    // Same sign
     if self.isNegative == other.isNegative {
-      self.addSameSign(other: other)
+      Self.addMagnitudes(lhs: &self.data, rhs: other.data)
       return
     }
 
     // Self positive, other negative: x + (-y) = x - y
     if self.isPositive {
       assert(other.isNegative)
-      self.sub(other: other)
+      let otherPositive = other.copy()
+      otherPositive.negate()
+      self.sub(other: otherPositive)
       return
     }
 
@@ -185,47 +189,46 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
   /// Both are positive or both are negative.
   ///
-  /// Basically 1:1 copy from Swift code (see top of this file for link).
-  private func addSameSign(other: BigIntHeap) {
-    let commonCount = Swift.min(self.data.count, other.data.count)
-    let maxCount = Swift.max(self.data.count, other.data.count)
-    self.data.reserveCapacity(maxCount)
+  /// Basically a copy of Swift '_unsignedAdd' function
+  /// (see top of this file for link).
+  private static func addMagnitudes(lhs: inout [Word], rhs: [Word]) {
+    let commonCount = Swift.min(lhs.count, rhs.count)
+    let maxCount = Swift.max(lhs.count, rhs.count)
+    lhs.reserveCapacity(maxCount)
 
     // Add the words up to the common count, carrying any overflows
     var carry: Word = 0
     for i in 0..<commonCount {
-      (carry, self.data[i]) = Self.add(self.data[i], other.data[i], carry)
+      (carry, lhs[i]) = Self.add(lhs[i], rhs[i], carry)
     }
 
-    // If there are leftover words in 'self', just need to handle any carries
-    if self.data.count > other.data.count {
+    // If there are leftover words in 'lhs', just need to handle any carries
+    if lhs.count > rhs.count {
       for i in commonCount..<maxCount {
         // No more action needed if there's nothing to carry
         if carry == 0 { break }
-        (carry, self.data[i]) = BigIntHeap.add(self.data[i], carry)
+        (carry, lhs[i]) = Self.add(lhs[i], carry)
       }
     }
-    // If there are leftover words in 'other', need to copy to 'self' with carries
+    // If there are leftover words in 'rhs', need to copy to 'lhs' with carries
     else {
       for i in commonCount..<maxCount {
         // Append remaining words if nothing to carry
         if carry == 0 {
-          self.data.append(contentsOf: other.data.suffix(from: i))
+          lhs.append(contentsOf: rhs.suffix(from: i))
           break
         }
 
-        let partialResult: Word
-        (carry, partialResult) = BigIntHeap.add(other.data[i], carry)
-        self.data.append(partialResult)
+        let word: Word
+        (carry, word) = Self.add(rhs[i], carry)
+        lhs.append(word)
       }
     }
 
     // If there's any carry left, add it now
     if carry != 0 {
-      self.data.append(1)
+      lhs.append(1)
     }
-
-    // No need to fix invariants
   }
 
   private typealias PartialAddResult = (carry: Word, result: Word)
@@ -250,7 +253,78 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   }
 
   internal func sub(other: BigIntHeap) {
-    fatalError()
+    defer { self.checkInvariants() }
+
+    if other.isZero {
+      return
+    }
+
+    if self.isZero {
+      let otherCopy = other.copy()
+      otherCopy.negate()
+      self.isNegative = otherCopy.isNegative
+      self.data = otherCopy.data
+      return
+    }
+
+    // We can simply add magnitudes when:
+    // - self.isNegative && other.isPositive (for example: -5 - 6 = -11)
+    // - self.isPositive && other.isNegative (for example:  5 - (-6) = 5 + 6 = 11)
+    // which is the same as:
+    if self.isNegative != other.isNegative {
+      Self.addMagnitudes(lhs: &self.data, rhs: other.data)
+      return
+    }
+
+    // Both have the same sign, for example '1 - 1' or '-2 - (-3)'.
+    // That means that we may need to cross 0.
+    switch Self.compareMagnitudes(lhs: self, rhs: other) {
+    case .equal: // 1 - 1
+      self.setToZero()
+    case .less: // 1 - 2
+      // smaller - greater = -greater + smaller = -(greater - smaller)
+      var otherCopy = other.data
+      Self.subMagnitudes(bigger: &otherCopy, smaller: self.data)
+      self.data = otherCopy
+      self.isNegative.toggle() // We crossed 0
+      self.fixInvariants() // Fix possible '0' prefix
+    case .greater: // 2 - 1
+      Self.subMagnitudes(bigger: &self.data, smaller: other.data)
+      self.fixInvariants() // Fix possible '0' prefix
+    }
+  }
+
+  /// Basically a copy of Swift '_unsignedSubtract' function
+  /// (see top of this file for link).
+  private static func subMagnitudes(bigger: inout [Word],
+                                    smaller: [Word]) {
+    var carry: Word = 0
+    for i in 0..<smaller.count {
+      (carry, bigger[i]) = Self.sub(bigger[i], smaller[i], carry)
+    }
+
+    for i in smaller.count..<bigger.count {
+      // No more action needed if there's nothing to carry
+      if carry == 0 { break }
+      (carry, bigger[i]) = Self.sub(bigger[i], carry)
+    }
+
+    assert(carry == 0)
+  }
+
+  private typealias PartialSubResult = (borrow: Word, result: Word)
+
+  private static func sub(_ x: Word, _ y: Word) -> PartialSubResult {
+    let (result, overflow) = x.subtractingReportingOverflow(y)
+    let borrow: Word = overflow ? 1 : 0
+    return (borrow, result)
+  }
+
+  private static func sub(_ x: Word, _ y: Word, _ z: Word) -> PartialSubResult {
+    let (xy, overflow1) = x.subtractingReportingOverflow(y)
+    let (xyz, overflow2) = xy.subtractingReportingOverflow(z)
+    let borrow: Word = (overflow1 ? 1 : 0) + (overflow2 ? 1 : 0)
+    return (borrow, xyz)
   }
 
   // MARK: - String
@@ -343,29 +417,53 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return lhs.isNegative
     }
 
+    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
+    case .less:
+      return true
+    case .equal,
+         .greater:
+      return false
+    }
+  }
+
+  private enum CompareMagnitudes {
+    case equal
+    case less
+    case greater
+  }
+
+  private static func compareMagnitudes(lhs: BigIntHeap,
+                                        rhs: BigIntHeap) -> CompareMagnitudes {
     // Shorter number is always smaller
     guard lhs.count == rhs.count else {
-      return lhs.count < rhs.count
+      return lhs.count < rhs.count ? .less : .greater
     }
 
-    // Same sign and equal word count -> compare from most significant word
+    // Compare from most significant word
     let indices = stride(from: lhs.data.count, through: 0, by: -1)
     for index in indices {
       let lhsWord = lhs.data[index]
       let rhsWord = rhs.data[index]
 
       if lhsWord < rhsWord {
-        return true
+        return .less
       }
 
       if lhsWord > rhsWord {
-        return false
+        return .greater
       }
 
-      // Equal -> compare next words
+      // Equal -> compare next word
     }
 
-    return false
+    return .equal
+  }
+
+  // MARK: - Factory
+
+  private func setToZero() {
+    self.isNegative = false
+    self.data = []
   }
 
   // MARK: - Invariants
