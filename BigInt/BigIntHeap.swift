@@ -20,8 +20,10 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   /// A Boolean value indicating whether this instance is negative.
   internal private(set) var isNegative: Bool
 
+  /// `0` is also positive.
   internal var isPositive: Bool {
-    return !self.isNegative
+    get { return !self.isNegative }
+    set { self.isNegative = !newValue }
   }
 
   internal var isZero: Bool {
@@ -147,14 +149,14 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     var carry: Word
-    (carry, lhs[0]) = Self.add(lhs[0], rhsWord)
+    (carry, lhs[0]) = lhs[0].addingFullWidth(rhsWord)
 
     for i in 1..<lhs.count {
       guard carry > 0 else {
         break
       }
 
-      (carry, lhs[i]) = Self.add(lhs[i], carry)
+      (carry, lhs[i]) = lhs[i].addingFullWidth(carry)
     }
 
     if carry > 0 {
@@ -210,7 +212,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     // Add the words up to the common count, carrying any overflows
     var carry: Word = 0
     for i in 0..<commonCount {
-      (carry, lhs[i]) = Self.add(lhs[i], rhs[i], carry)
+      (carry, lhs[i]) = lhs[i].addingFullWidth(rhs[i], carry)
     }
 
     // If there are leftover words in 'lhs', just need to handle any carries
@@ -218,7 +220,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       for i in commonCount..<maxCount {
         // No more action needed if there's nothing to carry
         if carry == 0 { break }
-        (carry, lhs[i]) = Self.add(lhs[i], carry)
+        (carry, lhs[i]) = lhs[i].addingFullWidth(carry)
       }
     }
     // If there are leftover words in 'rhs', need to copy to 'lhs' with carries
@@ -231,7 +233,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
         }
 
         let word: Word
-        (carry, word) = Self.add(rhs[i], carry)
+        (carry, word) = rhs[i].addingFullWidth(carry)
         lhs.append(word)
       }
     }
@@ -240,21 +242,6 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     if carry != 0 {
       lhs.append(1)
     }
-  }
-
-  private typealias PartialAddResult = (carry: Word, result: Word)
-
-  private static func add(_ x: Word, _ y: Word) -> PartialAddResult {
-    let (result, overflow) = x.addingReportingOverflow(y)
-    let carry: Word = overflow ? 1 : 0
-    return (carry, result)
-  }
-
-  private static func add(_ x: Word, _ y: Word, _ z: Word) -> PartialAddResult {
-    let (xy, overflow1) = x.addingReportingOverflow(y)
-    let (xyz, overflow2) = xy.addingReportingOverflow(z)
-    let carry: Word = (overflow1 ? 1 : 0) + (overflow2 ? 1 : 0)
-    return (carry, xyz)
   }
 
   // MARK: - Sub
@@ -317,12 +304,12 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     var carry: Word
-    (carry, bigger[0]) = Self.sub(bigger[0], smallerWord)
+    (carry, bigger[0]) = bigger[0].subtractingFullWidth(smallerWord)
 
     for i in 1..<bigger.count {
       // No more action needed if there's nothing to carry
       if carry == 0 { break }
-      (carry, bigger[i]) = Self.sub(bigger[i], carry)
+      (carry, bigger[i]) = bigger[i].subtractingFullWidth(carry)
     }
 
     assert(carry == 0)
@@ -376,32 +363,82 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
                                     smaller: [Word]) {
     var carry: Word = 0
     for i in 0..<smaller.count {
-      (carry, bigger[i]) = Self.sub(bigger[i], smaller[i], carry)
+      (carry, bigger[i]) = bigger[i].subtractingFullWidth(smaller[i], carry)
     }
 
     for i in smaller.count..<bigger.count {
       // No more action needed if there's nothing to carry
       if carry == 0 { break }
-      (carry, bigger[i]) = Self.sub(bigger[i], carry)
+      (carry, bigger[i]) = bigger[i].subtractingFullWidth(carry)
     }
 
     assert(carry == 0)
   }
 
-  private typealias PartialSubResult = (borrow: Word, result: Word)
+  // MARK: - Mul
 
-  private static func sub(_ x: Word, _ y: Word) -> PartialSubResult {
-    let (result, overflow) = x.subtractingReportingOverflow(y)
-    let borrow: Word = overflow ? 1 : 0
-    return (borrow, result)
+  internal func mul<T: BinaryInteger>(other: T) {
+    defer { self.checkInvariants() }
+
+    if other.isZero {
+      self.setToZero()
+      return
+    }
+
+    if self.isZero {
+      return
+    }
+
+    // If 'other' is a power of two, we can just left shift 'self'.
+    let otherLSB = other.trailingZeroBitCount
+    let isOtherPowerOf2 = other >> otherLSB == 1
+    if isOtherPowerOf2 {
+      self.shiftLeft(count: otherLSB)
+      return
+    }
+
+    Self.mulMagnitude(lhs: &self.data, rhs: other)
+
+    // If the signs are the same then we are positive.
+    // '1 * 2 = 2' and also (-1) * (-2) = 2
+    let sameSigns = self.isNegative == other.isNegative
+    self.isPositive = sameSigns
   }
 
-  private static func sub(_ x: Word, _ y: Word, _ z: Word) -> PartialSubResult {
-    let (xy, overflow1) = x.subtractingReportingOverflow(y)
-    let (xyz, overflow2) = xy.subtractingReportingOverflow(z)
-    let borrow: Word = (overflow1 ? 1 : 0) + (overflow2 ? 1 : 0)
-    return (borrow, xyz)
+  private static func mulMagnitude<T: BinaryInteger>(lhs: inout [Word],
+                                                     rhs: T) {
+    if rhs.isZero {
+      lhs = []
+      return
+    }
+
+    if lhs.isEmpty {
+      return
+    }
+
+    let rhsWord = Word(rhs.magnitude)
+
+    var carry: Word = 0
+    for i in 0..<lhs.count {
+      let product = lhs[i].multipliedFullWidth(by: rhsWord)
+      (carry, lhs[i]) = product.low.addingFullWidth(carry)
+      carry = carry &+ product.high
+    }
+
+    // Add the leftover carry
+    if carry != 0 {
+      lhs.append(carry)
+    }
   }
+
+  internal func mul(other: BigIntHeap) {
+    defer { self.checkInvariants() }
+    fatalError()
+  }
+
+  // MARK: - Shift
+
+  internal func shiftLeft<T: BinaryInteger>(count: T) { }
 
   // MARK: - String
 
