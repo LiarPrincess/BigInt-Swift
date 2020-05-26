@@ -171,6 +171,8 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
   public static func +<T: BinaryInteger> (lhs: BigInt, rhs: T) -> BigInt { fatalError() }
   public static func -<T: BinaryInteger> (lhs: BigInt, rhs: T) -> BigInt { fatalError() }
 
+  // TODO: In mul check for special case of 0, 1 and -1
+
   // MARK: - Shift
 
   internal func shiftLeft<T: BinaryInteger>(count: T) -> BigInt {

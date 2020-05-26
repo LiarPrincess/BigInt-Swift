@@ -377,9 +377,18 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
   // MARK: - Mul
 
+  private var hasMagnitudeOfOne: Bool {
+    guard self.count == 1 else {
+      return false
+    }
+
+    return self.data[0] == 1
+  }
+
   internal func mul<T: BinaryInteger>(other: T) {
     defer { self.checkInvariants() }
 
+    // Special case: 0
     if other.isZero {
       self.setToZero()
       return
@@ -389,7 +398,33 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return
     }
 
-    // If 'other' is a power of two, we can just left shift 'self'.
+    // Special case: 1
+    if other == T(1) {
+      return
+    }
+
+    let hasMagnitudeOfOne = self.hasMagnitudeOfOne
+    if self.isPositive && hasMagnitudeOfOne {
+      let word = Word(other.magnitude)
+      self.data = [word]
+      self.isNegative = other.isNegative
+      return
+    }
+
+    // Special case: -1
+    if T.isSigned && other == T(-1) {
+      self.negate()
+      return
+    }
+
+    if self.isNegative && hasMagnitudeOfOne {
+      let word = Word(other.magnitude)
+      self.data = [word]
+      self.isNegative = !other.isNegative // switch sign
+      return
+    }
+
+    // Special case: 'other' is a power of 2 -> we can just shift left
     let otherLSB = other.trailingZeroBitCount
     let isOtherPowerOf2 = other >> otherLSB == 1
     if isOtherPowerOf2 {
@@ -397,12 +432,11 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return
     }
 
-    Self.mulMagnitude(lhs: &self.data, rhs: other)
-
+    // Non-special case:
     // If the signs are the same then we are positive.
     // '1 * 2 = 2' and also (-1) * (-2) = 2
-    let sameSigns = self.isNegative == other.isNegative
-    self.isPositive = sameSigns
+    Self.mulMagnitude(lhs: &self.data, rhs: other)
+    self.isNegative = self.isNegative != other.isNegative
   }
 
   private static func mulMagnitude<T: BinaryInteger>(lhs: inout [Word],
@@ -416,13 +450,13 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return
     }
 
+    var carry: Word = 0
     let rhsWord = Word(rhs.magnitude)
 
-    var carry: Word = 0
     for i in 0..<lhs.count {
-      let product = lhs[i].multipliedFullWidth(by: rhsWord)
-      (carry, lhs[i]) = product.low.addingFullWidth(carry)
-      carry = carry &+ product.high
+      let (low, high) = lhs[i].multipliedFullWidth(by: rhsWord)
+      (carry, lhs[i]) = low.addingFullWidth(carry)
+      carry = carry &+ high
     }
 
     // Add the leftover carry
@@ -431,9 +465,105 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
   }
 
+  /// Basically a copy of Swift '*=' operator
+  /// (see top of this file for link).
   internal func mul(other: BigIntHeap) {
     defer { self.checkInvariants() }
-    fatalError()
+
+    // Special case: 0
+    if other.isZero {
+      self.setToZero()
+      return
+    }
+
+    if self.isZero {
+      return
+    }
+
+    // Special case: 1
+    let otherHasMagnitudeOfOne = other.hasMagnitudeOfOne
+    if other.isPositive && otherHasMagnitudeOfOne {
+      return
+    }
+
+    let selfHasMagnitudeOfOne = self.hasMagnitudeOfOne
+    if self.isPositive && selfHasMagnitudeOfOne {
+      self.data = other.data
+      self.isNegative = other.isNegative
+      return
+    }
+
+    // Special case: -1
+    if other.isNegative && otherHasMagnitudeOfOne {
+      self.negate()
+      return
+    }
+
+    if self.isNegative && selfHasMagnitudeOfOne {
+      self.data = other.data
+      self.isNegative = !other.isNegative // switch sign
+      return
+    }
+
+    // Non-special case:
+    // If the signs are the same then we are positive.
+    // '1 * 2 = 2' and also (-1) * (-2) = 2
+    self.data = Self.mulMagnitudes(lhs: self.data, rhs: other.data)
+    self.isNegative = self.isNegative != other.isNegative
+    self.fixInvariants()
+  }
+
+  /// Basically a copy of Swift '*=' operator
+  /// (see top of this file for link).
+  private static func mulMagnitudes(lhs: [Word], rhs: [Word]) -> [Word] {
+    var result = Array(repeating: Word.zero, count: lhs.count + rhs.count)
+    let (a, b) = lhs.count > rhs.count ? (lhs, rhs) : (rhs, lhs)
+    assert(a.count >= b.count)
+
+    var carry = Word.zero
+    for ai in 0..<a.count {
+      carry = 0
+      for bi in 0..<b.count {
+        // Each iteration needs to perform this operation:
+        //
+        //     result[ai + bi] += (a[ai] * b[bi]) + carry
+        //
+        // However, `a[ai] * b[bi]` produces a double-width result, and both
+        // additions can overflow to a higher word. The following two lines
+        // capture the low word of the multiplication and additions in
+        // `result[ai + bi]` and any addition overflow in `carry`.
+        let (high, low) = a[ai].multipliedFullWidth(by: b[bi])
+        (carry, result[ai + bi]) = result[ai + bi].addingFullWidth(low, carry)
+
+        // Now we combine the high word of the multiplication with any addition
+        // overflow. It is safe to add `product.high` and `carry` here without
+        // checking for overflow, because if `product.high == .max - 1`, then
+        // `carry <= 1`. Otherwise, `carry <= 2`.
+        //
+        // Worst-case (aka 9 + 9*9 + 9):
+        //
+        //       result         a[ai]        b[bi]         carry
+        //      0b11111111 + (0b11111111 * 0b11111111) + 0b11111111
+        //      0b11111111 + (0b11111110_____00000001) + 0b11111111
+        //                   (0b11111111_____00000000) + 0b11111111
+        //                   (0b11111111_____11111111)
+        //
+        // Second-worse case:
+        //
+        //      0b11111111 + (0b11111111 * 0b11111110) + 0b11111111
+        //      0b11111111 + (0b11111101_____00000010) + 0b11111111
+        //                   (0b11111110_____00000001) + 0b11111111
+        //                   (0b11111111_____00000000)
+        assert(!high.addingReportingOverflow(carry).overflow)
+        carry = high &+ carry
+      }
+
+      // Leftover `carry` is inserted in new highest word.
+      assert(result[ai + b.count] == 0)
+      result[ai + b.count] = carry
+    }
+
+    return result
   }
 
   // MARK: - Shift
