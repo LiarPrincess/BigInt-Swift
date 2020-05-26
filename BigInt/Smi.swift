@@ -173,9 +173,7 @@ internal struct Smi:
     // - 'other' is 0 -> produce the same error as Swift
     // - 'Storage.min / -1' -> value 1 greater than Storage.max
 
-    if other.value == 0 {
-      _ = self.value / other.value // Well, hello there...
-    }
+    precondition(other.value != 0, "Division by zero") // Well, hello there...
 
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))

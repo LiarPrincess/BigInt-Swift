@@ -43,6 +43,14 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return widthWithoutLast + last.minRequiredWidth
   }
 
+  private var hasMagnitudeOfOne: Bool {
+    guard self.count == 1 else {
+      return false
+    }
+
+    return self.data[0] == 1
+  }
+
   // MARK: - Init
 
   internal init(isNegative: Bool, word: Word) {
@@ -101,7 +109,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
   // MARK: - Add
 
-  internal func add<T: BinaryInteger>(other: T) {
+  internal func add<T: FixedWidthInteger>(other: T) {
     defer { self.checkInvariants() }
 
     if other.isZero {
@@ -136,7 +144,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     self.fixInvariants()
   }
 
-  private static func addMagnitude<T: BinaryInteger>(lhs: inout [Word], rhs: T) {
+  private static func addMagnitude<T: FixedWidthInteger>(lhs: inout [Word], rhs: T) {
     if rhs.isZero {
       return
     }
@@ -246,7 +254,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
   // MARK: - Sub
 
-  internal func sub<T: BinaryInteger>(other: T) {
+  internal func sub<T: FixedWidthInteger>(other: T) {
     defer { self.checkInvariants() }
 
     if other.isZero {
@@ -290,8 +298,8 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
   }
 
-  private static func subMagnitude<T: BinaryInteger>(bigger: inout [Word],
-                                                     smaller: T) {
+  private static func subMagnitude<T: FixedWidthInteger>(bigger: inout [Word],
+                                                         smaller: T) {
     if smaller.isZero {
       return
     }
@@ -377,15 +385,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
   // MARK: - Mul
 
-  private var hasMagnitudeOfOne: Bool {
-    guard self.count == 1 else {
-      return false
-    }
-
-    return self.data[0] == 1
-  }
-
-  internal func mul<T: BinaryInteger>(other: T) {
+  internal func mul<T: FixedWidthInteger>(other: T) {
     defer { self.checkInvariants() }
 
     // Special case: 0
@@ -424,7 +424,8 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return
     }
 
-    // Special case: 'other' is a power of 2 -> we can just shift left
+    // But wait, there is more:
+    // if 'other' is a power of 2 -> we can just shift left
     let otherLSB = other.trailingZeroBitCount
     let isOtherPowerOf2 = other >> otherLSB == 1
     if isOtherPowerOf2 {
@@ -439,8 +440,8 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     self.isNegative = self.isNegative != other.isNegative
   }
 
-  private static func mulMagnitude<T: BinaryInteger>(lhs: inout [Word],
-                                                     rhs: T) {
+  private static func mulMagnitude<T: FixedWidthInteger>(lhs: inout [Word],
+                                                         rhs: T) {
     if rhs.isZero {
       lhs = []
       return
@@ -566,9 +567,87 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return result
   }
 
+  // MARK: - Div
+
+  internal struct IntRemainder {
+
+    internal let isNegative: Bool
+    internal let value: Word
+
+    fileprivate init(isNegative: Bool, value: Word) {
+      self.isNegative = value.isZero ? false : isNegative
+      self.value = value
+    }
+
+    fileprivate static var zero: IntRemainder {
+      return IntRemainder(isNegative: false, value: .zero)
+    }
+  }
+
+  /// Returns remainder.
+  internal func divMod<T: FixedWidthInteger>(other: T) -> IntRemainder {
+    defer { self.checkInvariants() }
+
+    // Special cases: 'other' is 0, 1 or -1
+    precondition(!other.isZero, "Division by zero")
+
+    if other == T(1) {
+      return .zero // x / 1 = x
+    }
+
+    if T.isSigned && other == T(-1) {
+      self.negate() // x / (-1) = -x
+      return .zero
+    }
+
+    // Special cases: 'self' is 0, 1 or -1
+    // We know that other is not any of : -1, 0, 1 (which is important!).
+
+    if self.isZero {
+      // 0 divided by anything is 0
+      return .zero
+    }
+
+    // If the signs are the same then we are positive.
+    // '2 / 1 = 2' and also (-2) * (-1) = 2
+    let resultIsNegative = self.isNegative != other.isNegative
+
+    if self.hasMagnitudeOfOne {
+      // 1 or -1 divided by anything other than [0, 1, -1] is 0
+      self.setToZero()
+      return IntRemainder(isNegative: resultIsNegative, value: 1)
+    }
+
+    // But wait, there is more:
+    // if 'other' is a power of 2 -> we can just shift right
+    let otherLSB = other.trailingZeroBitCount
+    let isOtherPowerOf2 = other >> otherLSB == 1
+    if isOtherPowerOf2 {
+      // Remainder - part we are 'chopping' off
+      // (just like in Overcooked: chop, chop, chop)
+      let remainderMask = ~(~Word.zero << otherLSB)
+      let remainder = self.data[0] & remainderMask
+      self.shiftRight(count: otherLSB)
+      return IntRemainder(isNegative: resultIsNegative, value: remainder)
+    }
+
+    let otherWord = Word(other.magnitude)
+
+    var carry = Word.zero
+    for i in (0..<self.data.count).reversed() {
+      let lhs = (high: carry, low: self.data[i])
+      (self.data[i], carry) = otherWord.dividingFullWidth(lhs)
+    }
+
+    self.isNegative = resultIsNegative
+    self.fixInvariants()
+    return IntRemainder(isNegative: resultIsNegative, value: carry)
+  }
+
   // MARK: - Shift
 
-  internal func shiftLeft<T: BinaryInteger>(count: T) { }
+  internal func shiftLeft<T: FixedWidthInteger>(count: T) { }
+  internal func shiftRight<T: FixedWidthInteger>(count: T) { }
 
   // MARK: - String
 
