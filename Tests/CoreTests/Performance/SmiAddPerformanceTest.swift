@@ -1,5 +1,5 @@
 import XCTest
-@testable import BigInt
+@testable import Core
 
 class SmiAddPerformanceTest: XCTestCase {
 

@@ -33,6 +33,10 @@ internal struct Smi:
     return !self.isNegative
   }
 
+  internal var bitWidth: Int {
+    return self.value.bitWidth
+  }
+
   internal var minRequiredWidth: Int {
     return self.value.minRequiredWidth
   }

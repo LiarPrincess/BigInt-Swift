@@ -1,4 +1,4 @@
-@testable import BigInt
+@testable import Core
 
 extension BigInt {
 

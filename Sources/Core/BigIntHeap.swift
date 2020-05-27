@@ -34,9 +34,40 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return self.data.count
   }
 
-  internal var minRequiredWidth: Int {
+  internal var bitWidth: Int {
+    // Check for 0
     guard let last = self.data.last else {
-      return (0).minRequiredWidth
+      return Word.zero.bitWidth
+    }
+
+    let sign = 1
+    return self.count * Word.bitWidth - last.leadingZeroBitCount + sign
+  }
+
+  internal var leadingZeroBitCount: Int {
+    // Check for 0
+    guard let last = self.data.last else {
+      return Word.zero.leadingZeroBitCount
+    }
+
+    return last.leadingZeroBitCount
+  }
+
+  internal var trailingZeroBitCount: Int {
+    for (index, word) in self.data.enumerated() {
+      if !word.isZero {
+        return index * word.bitWidth + word.trailingZeroBitCount
+      }
+    }
+
+    assert(self.isZero)
+    return Word.zero.trailingZeroBitCount
+  }
+
+  internal var minRequiredWidth: Int {
+    // Check for 0
+    guard let last = self.data.last else {
+      return Word.zero.minRequiredWidth
     }
 
     let widthWithoutLast = (self.count - 1) * Word.bitWidth
@@ -279,7 +310,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
     // Both have the same sign, for example '1 - 1' or '-2 - (-3)'.
     // That means that we may need to cross 0.
-    switch Self.compareMagnitudes(lhs: self, rhs: other) {
+    switch Self.compareMagnitudes(lhs: self.data, rhs: other) {
     case .equal: // 1 - 1
       self.setToZero()
     case .less: // 1 - 2
@@ -349,7 +380,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
 
     // Both have the same sign, for example '1 - 1' or '-2 - (-3)'.
     // That means that we may need to cross 0.
-    switch Self.compareMagnitudes(lhs: self, rhs: other) {
+    switch Self.compareMagnitudes(lhs: self.data, rhs: other.data) {
     case .equal: // 1 - 1
       self.setToZero()
     case .less: // 1 - 2
@@ -482,25 +513,23 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     // Special case: 1
-    let otherHasMagnitudeOfOne = other.hasMagnitudeOfOne
-    if other.isPositive && otherHasMagnitudeOfOne {
+    if other.isPositive && other.hasMagnitudeOfOne {
       return
     }
 
-    let selfHasMagnitudeOfOne = self.hasMagnitudeOfOne
-    if self.isPositive && selfHasMagnitudeOfOne {
+    if self.isPositive && self.hasMagnitudeOfOne {
       self.data = other.data
       self.isNegative = other.isNegative
       return
     }
 
     // Special case: -1
-    if other.isNegative && otherHasMagnitudeOfOne {
+    if other.isNegative && other.hasMagnitudeOfOne {
       self.negate()
       return
     }
 
-    if self.isNegative && selfHasMagnitudeOfOne {
+    if self.isNegative && self.hasMagnitudeOfOne {
       self.data = other.data
       self.isNegative = !other.isNegative // switch sign
       return
@@ -585,11 +614,34 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   }
 
   /// Returns remainder.
+  ///
+  /// Sign:
+  /// - sign of the result follows standard marh rules:
+  ///   if the operands had the same sign then positive, otherwise negative
+  /// - sign of the remainder is the same `self` sign
+  ///
+  /// Based on following Swift code:
+  /// ```
+  /// let x = 10
+  /// let y = 3
+  ///
+  /// print(" \(x) /  \(y) =", x / y, "rem:", x % y)
+  /// print(" \(x) / -\(y) =", x / (-y), "rem:", x % (-y))
+  /// print("-\(x) /  \(y) =", (-x) / y, "rem:", (-x) % y)
+  /// print("-\(x) / -\(y) =", (-x) / (-y), "rem:", (-x) % (-y))
+  /// ```
+  ///
+  /// - Important:
+  /// In Python sign acts a bit differently
   internal func divMod<T: FixedWidthInteger>(other: T) -> IntRemainder {
     defer { self.checkInvariants() }
 
-    // Special cases: 'other' is 0, 1 or -1
     precondition(!other.isZero, "Division by zero")
+
+    if self.isZero {
+      // 0 divided by anything is 0
+      return .zero
+    }
 
     if other == T(1) {
       return .zero // x / 1 = x
@@ -600,50 +652,168 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return .zero
     }
 
-    // Special cases: 'self' is 0, 1 or -1
-    // We know that other is not any of : -1, 0, 1 (which is important!).
+    // Remainder will have the same sign as we (now).
+    let remainderIsNegative = self.isNegative
+    // If the signs are the same then we are positive.
+    // '2 / 1 = 2' and also (-2) * (-1) = 2
+    self.isNegative = self.isNegative != other.isNegative
+
+    // From now on, any operations must not take into account sign,
+    // as it was already set to its final value!
+
+    switch BigIntHeap.compareMagnitudes(lhs: self.data, rhs: other) {
+    case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
+      self.setToOne()
+      return .zero
+
+    case .less: // 3 / 5 = 0 rem 3
+      // We have exactly 1 word (we checked for 0 and we are less than single int)
+      let remainder = self.data[0]
+      self.setToZero()
+      return IntRemainder(isNegative: remainderIsNegative, value: remainder)
+
+    case .greater:
+      let remainder = Self.divModMagnitude(lhs: &self.data, rhs: other)
+      self.fixInvariants()
+      return IntRemainder(isNegative: remainderIsNegative, value: remainder)
+    }
+  }
+
+  /// Returns remainder.
+  private static func divModMagnitude<T: FixedWidthInteger>(
+    lhs: inout [Word],
+    rhs: T
+  ) -> Word {
+    // If 'rhs' is a power of 2 -> we can just shift right
+    let otherLSB = rhs.trailingZeroBitCount
+    let isOtherPowerOf2 = rhs >> otherLSB == 1
+    if isOtherPowerOf2 {
+      // Remainder - part we are 'chopping' off
+      // (just like in Overcooked: chop, chop, chop)
+      let remainderMask = ~(~Word.zero << otherLSB)
+      let remainder = lhs[0] & remainderMask
+//      self.shiftRight(count: otherLSB) // TODO: Shift for magnitude
+      return remainder
+    }
+
+    let rhsWord = Word(rhs.magnitude)
+
+    var carry = Word.zero
+    for i in (0..<lhs.count).reversed() {
+      let x = (high: carry, low: lhs[i])
+      (lhs[i], carry) = rhsWord.dividingFullWidth(x)
+    }
+
+    return carry
+  }
+
+  internal struct BigIntRemainder {
+
+    internal let isNegative: Bool
+    internal let data: [Word]
+
+    fileprivate init(isNegative: Bool, data: [Word]) {
+      self.isNegative = data.isEmpty ? false : isNegative
+      self.data = data
+    }
+
+    fileprivate static var zero: BigIntRemainder {
+      return BigIntRemainder(isNegative: false, data: [])
+    }
+  }
+
+  /// Basically a copy of Swift '_internalDivide' operator
+  /// (see top of this file for link).
+  internal func divMod(other: BigIntHeap) -> BigIntRemainder {
+    defer { self.checkInvariants() }
+
+    // Special cases: 'other' is 0, 1 or -1
+    precondition(!other.isZero, "Division by zero")
 
     if self.isZero {
       // 0 divided by anything is 0
       return .zero
     }
 
+    if other.isPositive && other.hasMagnitudeOfOne {
+      return .zero // x / 1 = x
+    }
+
+    if other.isNegative && other.hasMagnitudeOfOne {
+      self.negate() // x / (-1) = -x
+      return .zero
+    }
+
+    // TODO: Special case when 'other.count = 1'
+
+    // Remainder will have the same sign as we (now).
+    let remainderIsNegative = self.isNegative
     // If the signs are the same then we are positive.
     // '2 / 1 = 2' and also (-2) * (-1) = 2
-    let resultIsNegative = self.isNegative != other.isNegative
+    self.isNegative = self.isNegative != other.isNegative
 
-    if self.hasMagnitudeOfOne {
-      // 1 or -1 divided by anything other than [0, 1, -1] is 0
+    // From now on, any operations must not take into account sign,
+    // as it was already set to its final value!
+
+    switch BigIntHeap.compareMagnitudes(lhs: self.data, rhs: other.data) {
+    case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
+      self.setToOne()
+      return .zero
+
+    case .less: // 3 / 5 = 0 rem 3
+      // Bascially return 'self' as remainder
+      let remainder = self.data
       self.setToZero()
-      return IntRemainder(isNegative: resultIsNegative, value: 1)
+      return BigIntRemainder(isNegative: remainderIsNegative, data: remainder)
+
+    case .greater:
+      // Oh no! We have to implement proper div logic!
+//      let remainder = Self.divModMagnitudes(lhs: &self.data, rhs: other.data)
+//      self.fixInvariants()
+//      return BigIntRemainder(isNegative: remainderIsNegative, data: remainder)
+      fatalError()
     }
-
-    // But wait, there is more:
-    // if 'other' is a power of 2 -> we can just shift right
-    let otherLSB = other.trailingZeroBitCount
-    let isOtherPowerOf2 = other >> otherLSB == 1
-    if isOtherPowerOf2 {
-      // Remainder - part we are 'chopping' off
-      // (just like in Overcooked: chop, chop, chop)
-      let remainderMask = ~(~Word.zero << otherLSB)
-      let remainder = self.data[0] & remainderMask
-      self.shiftRight(count: otherLSB)
-      return IntRemainder(isNegative: resultIsNegative, value: remainder)
-    }
-
-    let otherWord = Word(other.magnitude)
-
-    var carry = Word.zero
-    for i in (0..<self.data.count).reversed() {
-      let lhs = (high: carry, low: self.data[i])
-      (self.data[i], carry) = otherWord.dividingFullWidth(lhs)
-    }
-
-    self.isNegative = resultIsNegative
-    self.fixInvariants()
-    return IntRemainder(isNegative: resultIsNegative, value: carry)
   }
+/*
+  /// Returns remainder.
+  ///
+  /// Basically a copy of Swift '_internalDivide' operator
+  /// (see top of this file for link).
+  private static func divModMagnitudes(lhs: inout [Word],
+                                       rhs: [Word]) -> [Word] {
+    precondition(!rhs.isEmpty, "Division by zero")
 
+    if lhs.isEmpty {
+      // 0 divided by anything is 0
+      return []
+    }
+
+    // At this point both are non-empty
+    let n = (lhs.count - rhs.count) * Word.bitWidth
+
+    var remainder = lhs
+    var quotient = 0
+
+    var tempRHS = rhs << n
+    var tempQuotient = 1 << n
+
+    for _ in (0...n) {
+      switch BigIntHeap.compareMagnitudes(lhs: remainder, rhs: tempRHS) {
+      case .greater:
+        remainder -= tempRHS
+        quotient += tempQuotient
+      case .equal,
+           .less:
+        break
+      }
+
+//      tempRHS >>= 1
+//      tempQuotient >>= 1
+    }
+
+    fatalError()
+  }
+*/
   // MARK: - Shift
 
   internal func shiftLeft<T: FixedWidthInteger>(count: T) { }
@@ -682,7 +852,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return false
     }
 
-    switch Self.compareMagnitudes(lhs: heap, rhs: smi.value) {
+    switch Self.compareMagnitudes(lhs: heap.data, rhs: smi.value) {
     case .equal:
       return true
     case .less,
@@ -703,7 +873,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return smi.isNegative
     }
 
-    switch Self.compareMagnitudes(lhs: heap, rhs: smi.value) {
+    switch Self.compareMagnitudes(lhs: heap.data, rhs: smi.value) {
     case .equal,
          .greater:
       return true
@@ -718,7 +888,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return heap.isNegative
     }
 
-    switch Self.compareMagnitudes(lhs: heap, rhs: smi.value) {
+    switch Self.compareMagnitudes(lhs: heap.data, rhs: smi.value) {
     case .less:
       return true
     case .equal,
@@ -733,7 +903,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
       return lhs.isNegative
     }
 
-    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
+    switch Self.compareMagnitudes(lhs: lhs.data, rhs: rhs.data) {
     case .less:
       return true
     case .equal,
@@ -749,7 +919,7 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   }
 
   private static func compareMagnitudes<T: BinaryInteger>(
-    lhs: BigIntHeap,
+    lhs: [Word],
     rhs: T
   ) -> CompareMagnitudes {
     // If we have more words than 1 then we are our of range of smi
@@ -758,25 +928,25 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     }
 
     // We have only 1 word in heap -> compare with value
-    let lhsWord = lhs.data[0]
+    let lhsWord = lhs[0]
     let rhsWord = Word(rhs.magnitude)
     return lhsWord == rhsWord ? .equal :
            lhsWord > rhsWord ? .greater :
           .less
   }
 
-  private static func compareMagnitudes(lhs: BigIntHeap,
-                                        rhs: BigIntHeap) -> CompareMagnitudes {
+  private static func compareMagnitudes(lhs: [Word],
+                                        rhs: [Word]) -> CompareMagnitudes {
     // Shorter number is always smaller
     guard lhs.count == rhs.count else {
       return lhs.count < rhs.count ? .less : .greater
     }
 
     // Compare from most significant word
-    let indices = stride(from: lhs.data.count, through: 0, by: -1)
+    let indices = stride(from: lhs.count, through: 0, by: -1)
     for index in indices {
-      let lhsWord = lhs.data[index]
-      let rhsWord = rhs.data[index]
+      let lhsWord = lhs[index]
+      let rhsWord = rhs[index]
 
       if lhsWord < rhsWord {
         return .less
@@ -797,6 +967,11 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
   private func setToZero() {
     self.isNegative = false
     self.data = []
+  }
+
+  private func setToOne() {
+    self.isNegative = false
+    self.data = [Word(1)]
   }
 
   // MARK: - Invariants
