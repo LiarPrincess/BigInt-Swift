@@ -238,8 +238,10 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
       return BigInt(smi: result)
     }
 
-    // TODO: Implement left shift smi->heap.
-    fatalError()
+    // There is no other way than to upgrade 'self' to heap
+    let selfHeap = self.asHeap()
+    selfHeap.shiftLeft(count: count)
+    return BigInt(selfHeap)
   }
 
   // MARK: - Shift right
