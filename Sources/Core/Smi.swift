@@ -5,6 +5,7 @@
 internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
   internal typealias Storage = Int32
+  internal typealias Words = Storage.Words
 
   // MARK: - Properties
 
@@ -20,6 +21,10 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
   internal var isPositive: Bool {
     return !self.isNegative
+  }
+
+  internal var words: Words {
+    return self.value.words
   }
 
   internal var magnitude: BigInt {

@@ -8,9 +8,15 @@ import BigIntProxy
 /// Use `copy()` if needed.
 internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConvertible {
 
+  internal typealias Words = BigIntProxy.Words
+
   // MARK: - Properties
 
   private var value: BigIntProxy
+
+  internal var words: Words {
+    return self.value.words
+  }
 
   internal var magnitude: BigInt {
     let result = self.value.magnitude

@@ -5,14 +5,70 @@ public struct BigInt:
   Comparable, Hashable,
   CustomStringConvertible, CustomDebugStringConvertible {
 
+  // MARK: - Helper types
+
   internal enum Storage {
     case smi(Smi)
     case heap(BigIntHeap)
   }
 
+  public struct Words: RandomAccessCollection {
+
+    // swiftlint:disable:next nesting
+    private enum Inner {
+      case smi(Smi.Words)
+      case heap(BigIntHeap.Words)
+    }
+
+    private let inner: Inner
+
+    fileprivate init(_ value: BigInt) {
+      switch value.value {
+      case let .smi(smi):
+        self.inner = .smi(smi.words)
+      case let .heap(heap):
+        self.inner = .heap(heap.words)
+      }
+    }
+
+    public var count: Int {
+      switch self.inner {
+      case let .smi(smi):
+        return smi.count
+      case let .heap(heap):
+        return heap.count
+      }
+    }
+
+    public var indices: Indices {
+      return 0..<self.count
+    }
+
+    public var startIndex: Int {
+      return 0
+    }
+
+    public var endIndex: Int {
+      return self.count
+    }
+
+    public subscript(_ index: Int) -> UInt {
+      switch self.inner {
+      case let .smi(smi):
+        return smi[index]
+      case let .heap(heap):
+        return heap[index]
+      }
+    }
+  }
+
   // MARK: - Properties
 
   internal private(set) var value: Storage
+
+  public var words: Words {
+    return Words(self)
+  }
 
   public var magnitude: BigInt {
     switch self.value {
