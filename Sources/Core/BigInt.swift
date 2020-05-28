@@ -310,7 +310,39 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     }
   }
 
-  // TODO: Add divMod
+  // MARK: - Div mod
+
+  public typealias DivMod = (quotient: BigInt, remainder: BigInt)
+
+  public func divMod(other: BigInt) -> DivMod {
+    switch (self.value, other.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      // This is so cheap that we can do it in a trivial way
+      let quotient = lhs.div(other: rhs)
+      let remainder = lhs.mod(other: rhs)
+      return (quotient: quotient, remainder: remainder)
+
+    case let (.smi(lhs), .heap(rhs)):
+      // We need to promote 'lhs' to heap
+      let lhsHeap = BigIntHeap(lhs.value)
+      return self.divMod(lhs: lhsHeap, rhs: rhs)
+
+    case let (.heap(lhs), .smi(rhs)):
+      // We need to promote 'rhs' to heap
+      let rhsHeap = BigIntHeap(rhs.value)
+      return self.divMod(lhs: lhs, rhs: rhsHeap)
+
+    case let (.heap(lhs), .heap(rhs)):
+      return self.divMod(lhs: lhs, rhs: rhs)
+    }
+  }
+
+  private func divMod(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
+    let result = BigIntHeap.divMod(lhs: lhs, rhs: rhs)
+    let quotient = BigInt(result.quotient)
+    let remainder = BigInt(result.remainder)
+    return (quotient: quotient, remainder: remainder)
+  }
 
   // MARK: - Shift left
 

@@ -89,6 +89,17 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value %= other.value
   }
 
+  // MARK: - Div mod
+
+  internal typealias DivMod = (quotient: BigIntHeap, remainder: BigIntHeap)
+
+  internal static func divMod(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
+    let result = lhs.value.quotientAndRemainder(dividingBy: rhs.value)
+    let quotient = BigIntHeap(value: result.quotient)
+    let remainder = BigIntHeap(value: result.remainder)
+    return (quotient: quotient, remainder: remainder)
+  }
+
   // MARK: - Shift left
 
   internal func shiftLeft<T: BinaryInteger>(count: T) {
