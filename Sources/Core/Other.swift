@@ -50,38 +50,4 @@ extension FixedWidthInteger {
     let inverted = ~self
     return self.bitWidth - inverted.leadingZeroBitCount + sign
   }
-
-  internal typealias FullWidthAdd = (carry: Self, result: Self)
-
-  /// `result = self + y`
-  internal func addingFullWidth(_ y: Self) -> FullWidthAdd {
-    let (result, overflow) = self.addingReportingOverflow(y)
-    let carry: Self = overflow ? 1 : 0
-    return (carry, result)
-  }
-
-  /// `result = self + y + z`
-  internal func addingFullWidth(_ y: Self, _ z: Self) -> FullWidthAdd {
-    let (xy, overflow1) = self.addingReportingOverflow(y)
-    let (xyz, overflow2) = xy.addingReportingOverflow(z)
-    let carry: Self = (overflow1 ? 1 : 0) + (overflow2 ? 1 : 0)
-    return (carry, xyz)
-  }
-
-  internal typealias FullWidthSub = (borrow: Self, result: Self)
-
-  /// `result = self - y`
-  internal func subtractingFullWidth(_ y: Self) -> FullWidthSub {
-    let (result, overflow) = self.subtractingReportingOverflow(y)
-    let borrow: Self = overflow ? 1 : 0
-    return (borrow, result)
-  }
-
-  /// `result = self - y - z`
-  internal func subtractingFullWidth(_ y: Self, _ z: Self) -> FullWidthSub {
-    let (xy, overflow1) = self.subtractingReportingOverflow(y)
-    let (xyz, overflow2) = xy.subtractingReportingOverflow(z)
-    let borrow: Self = (overflow1 ? 1 : 0) + (overflow2 ? 1 : 0)
-    return (borrow, xyz)
-  }
 }

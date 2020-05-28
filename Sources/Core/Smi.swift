@@ -1,23 +1,10 @@
 // swiftlint:disable empty_count
 // swiftlint:disable file_length
 
-// TODO: Cleanup in properties
-
 /// Small integer, named after similiar type in `V8`.
-internal struct Smi:
-  Comparable, CustomStringConvertible, CustomDebugStringConvertible {
+internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
   internal typealias Storage = Int32
-
-  // MARK: - Static properties
-
-  internal static var min: Storage {
-    return Storage.min
-  }
-
-  internal static var max: Storage {
-    return Storage.max
-  }
 
   // MARK: - Properties
 
@@ -33,10 +20,6 @@ internal struct Smi:
 
   internal var isPositive: Bool {
     return !self.isNegative
-  }
-
-  internal var bitWidth: Int {
-    return self.value.bitWidth
   }
 
   internal var minRequiredWidth: Int {
@@ -61,7 +44,7 @@ internal struct Smi:
 
   internal var negated: BigInt {
     // Binary numbers have bigger range on the negative side.
-    if self.value == Self.min {
+    if self.value == Storage.min {
       let selfHeap = self.asHeap()
       selfHeap.negate()
       return BigInt(selfHeap)
@@ -208,8 +191,6 @@ internal struct Smi:
     assert(other.value == Storage(-1))
     return BigInt(smi: 0)
   }
-
-  // TODO: Add divMod
 
   // MARK: - And
 
