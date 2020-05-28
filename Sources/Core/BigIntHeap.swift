@@ -151,6 +151,16 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     return lhs.value >= rhs.value
   }
 
+  // MARK: - Hashable
+
+  internal func hash(into hasher: inout Hasher) {
+    if let smi = self.asSmiIfPossible() {
+      smi.hash(into: &hasher)
+    } else {
+      self.value.hash(into: &hasher)
+    }
+  }
+
   // MARK: - Copy
 
   internal func copy() -> BigIntHeap {

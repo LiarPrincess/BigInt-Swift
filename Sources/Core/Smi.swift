@@ -286,6 +286,12 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
     return lhs.value < rhs.value
   }
 
+  // MARK: - Hashable
+
+  internal func hash(into hasher: inout Hasher) {
+    hasher.combine(self.value)
+  }
+
   // MARK: - Strideable
 
   internal func distance(to other: Smi) -> BigInt {

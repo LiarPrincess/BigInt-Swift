@@ -1,6 +1,10 @@
 // swiftlint:disable file_length
 
-public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConvertible {
+public struct BigInt:
+//  SignedInteger, BinaryInteger, ExpressibleByIntegerLiteral
+//  Strideable,
+  Comparable, Hashable,
+  CustomStringConvertible, CustomDebugStringConvertible {
 
   internal enum Storage {
     case smi(Smi)
@@ -447,6 +451,17 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
       return heap < smi
     case let (.heap(lhs), .heap(rhs)):
       return lhs < rhs
+    }
+  }
+
+  // MARK: - Hashable
+
+  public func hash(into hasher: inout Hasher) {
+    switch self.value {
+    case let .smi(smi):
+      smi.hash(into: &hasher)
+    case let .heap(heap):
+      heap.hash(into: &hasher)
     }
   }
 }
