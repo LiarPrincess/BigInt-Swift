@@ -1,6 +1,8 @@
 // swiftlint:disable empty_count
 // swiftlint:disable file_length
 
+// TODO: Cleanup in properties
+
 /// Small integer, named after similiar type in `V8`.
 internal struct Smi:
   Comparable, CustomStringConvertible, CustomDebugStringConvertible {
@@ -57,13 +59,12 @@ internal struct Smi:
 
   // MARK: - Unary operations
 
-  internal var minus: BigInt {
+  internal var negated: BigInt {
     // Binary numbers have bigger range on the negative side.
     if self.value == Self.min {
-      let magnitude = Self.min.magnitude
-      let word = BigIntHeap.Word(magnitude)
-      let heap = BigIntHeap(isNegative: false, word: word)
-      return BigInt(heap)
+      let selfHeap = self.asHeap()
+      selfHeap.negate()
+      return BigInt(selfHeap)
     }
 
     return BigInt(smi: -self.value)
@@ -82,11 +83,10 @@ internal struct Smi:
     }
 
     // Binary numbers have bigger range on the negative side.
-    // Special case, don't ask.
     if self.value == Storage.min && other.value == Storage.min {
-      let min = BigIntHeap.Word(Storage.min.magnitude)
-      let heap = BigIntHeap(isNegative: true, word: min << 1) // *2
-      return BigInt(heap)
+      let selfHeap = self.asHeap()
+      selfHeap.shiftLeft(count: 1) // * 2
+      return BigInt(selfHeap)
     }
 
     return self.handleAddSubOverflow(result: result)
@@ -105,13 +105,14 @@ internal struct Smi:
     // If we were zero:
     // - well... how did we overflow?
 
-    let isNegative = self.isNegative
-
-    let x = isNegative ? ((~result) &+ 1) : result
+    let x = self.isNegative ? ((~result) &+ 1) : result
     let unsigned = Storage.Magnitude(bitPattern: x)
-    let word = BigIntHeap.Word(unsigned)
 
-    let heap = BigIntHeap(isNegative: isNegative, word: word)
+    let heap = BigIntHeap(unsigned)
+    if self.isNegative {
+      heap.negate()
+    }
+
     return BigInt(heap)
   }
 
@@ -174,15 +175,15 @@ internal struct Smi:
     }
 
     // AFAIK we can overflow in 2 cases:
-    // - 'other' is 0 -> produce the same error as Swift
+    // - 'other' is 0
     // - 'Storage.min / -1' -> value 1 greater than Storage.max
 
     precondition(other.value != 0, "Division by zero") // Well, hello there...
 
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))
-    let word = BigIntHeap.Word(Storage.max) + 1
-    let heap = BigIntHeap(isNegative: false, word: word)
+    let maxPlus1 = Storage.max.magnitude + 1
+    let heap = BigIntHeap(maxPlus1)
     return BigInt(heap)
   }
 
@@ -208,15 +209,21 @@ internal struct Smi:
     return BigInt(smi: 0)
   }
 
-  // MARK: - Bit operations
+  // TODO: Add divMod
+
+  // MARK: - And
 
   internal func and(other: Smi) -> BigInt {
     return BigInt(smi: self.value & other.value)
   }
 
+  // MARK: - Or
+
   internal func or(other: Smi) -> BigInt {
     return BigInt(smi: self.value | other.value)
   }
+
+  // MARK: - Xor
 
   internal func xor(other: Smi) -> BigInt {
     return BigInt(smi: self.value ^ other.value)
@@ -304,5 +311,11 @@ internal struct Smi:
 
   internal func advanced(by n: Smi) -> BigInt {
     return self.add(other: n)
+  }
+
+  // MARK: - As heap
+
+  private func asHeap() -> BigIntHeap {
+    return BigIntHeap(self.value)
   }
 }

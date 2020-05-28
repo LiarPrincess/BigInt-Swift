@@ -15,7 +15,7 @@ class SmiUnaryTests: XCTestCase {
     for value in values {
       let smi = Smi(value)
       let expected = BigInt(smi: -value)
-      XCTAssertEqual(smi.minus, expected, String(describing: value))
+      XCTAssertEqual(smi.negated, expected, String(describing: value))
     }
   }
 
@@ -32,7 +32,7 @@ class SmiUnaryTests: XCTestCase {
 
     let smi = Smi(minSmiStorage)
     let expected = BigInt(-minSmi)
-    XCTAssertEqual(smi.minus, expected)
+    XCTAssertEqual(smi.negated, expected)
   }
 
   // MARK: - Invert

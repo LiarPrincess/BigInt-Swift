@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConvertible {
 
   internal enum Storage {
@@ -43,8 +45,23 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     self.value = .smi(value)
   }
 
+  /// This will downgrade to `Smi` if possible
   internal init(_ value: BigIntHeap) {
     self.value = .heap(value)
+    self.downgradeToSmiIfPossible()
+  }
+
+  // MARK: - Downgrade
+
+  private mutating func downgradeToSmiIfPossible() {
+    switch self.value {
+    case .smi:
+      break
+    case .heap(let heap):
+      if let smi = heap.asSmiIfPossible() {
+        self.value = .smi(smi)
+      }
+    }
   }
 
   // MARK: - Unary operators
@@ -56,11 +73,11 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
   public static prefix func - (value: BigInt) -> BigInt {
     switch value.value {
     case let .smi(smi):
-      return smi.minus
+      return smi.negated
     case let .heap(heap):
       let copy = heap.copy()
       copy.negate()
-      return copy.asNormalizedBigInt
+      return BigInt(copy)
     }
   }
 
@@ -71,7 +88,7 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case let .heap(heap):
       let copy = heap.copy()
       copy.invert()
-      return copy.asNormalizedBigInt
+      return BigInt(copy)
     }
   }
 
@@ -85,17 +102,15 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
       let copy = heap.copy()
-      copy.add(other: smi.value)
-      return copy.asNormalizedBigInt
+      copy.add(other: smi)
+      return BigInt(copy)
 
     case let (.heap(lhs), .heap(rhs)):
       let copy = lhs.copy()
       copy.add(other: rhs)
-      return copy.asNormalizedBigInt
+      return BigInt(copy)
     }
   }
-
-  // TODO: If we are heap, them maybe we can downgrade?
 
   public static func += (lhs: inout BigInt, rhs: BigInt) {
     switch (lhs.value, rhs.value) {
@@ -104,16 +119,19 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      // Unfortunately in this case we have to copy rhs
+      // Unfortunately in this case we have to copy 'rhs'
       let rhsCopy = rhs.copy()
-      rhsCopy.add(other: lhsSmi.value)
+      rhsCopy.add(other: lhsSmi)
       lhs.value = .heap(rhsCopy)
+      lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhs), .smi(rhs)):
-      lhs.add(other: rhs.value)
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.add(other: rhs)
+      lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhs), .heap(rhs)):
-      lhs.add(other: rhs)
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.add(other: rhs)
+      lhs.downgradeToSmiIfPossible()
     }
   }
 
@@ -128,18 +146,18 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
       // x - y = x + (-y) = (-y) + x
       let rhsCopy = rhs.copy()
       rhsCopy.negate()
-      rhsCopy.add(other: lhs.value)
-      return rhsCopy.asNormalizedBigInt
+      rhsCopy.add(other: lhs)
+      return BigInt(rhsCopy)
 
     case let (.heap(lhs), .smi(rhs)):
       let copy = lhs.copy()
-      copy.sub(other: rhs.value)
-      return copy.asNormalizedBigInt
+      copy.sub(other: rhs)
+      return BigInt(copy)
 
     case let (.heap(lhs), .heap(rhs)):
       let copy = lhs.copy()
       copy.sub(other: rhs)
-      return copy.asNormalizedBigInt
+      return BigInt(copy)
     }
   }
 
@@ -154,64 +172,198 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
       // x - y = x + (-y) = (-y) + x
       let rhsCopy = rhs.copy()
       rhsCopy.negate()
-      rhsCopy.add(other: lhsSmi.value)
+      rhsCopy.add(other: lhsSmi)
       lhs.value = .heap(rhsCopy)
+      lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhs), .smi(rhs)):
-      lhs.sub(other: rhs.value)
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.sub(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.sub(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+    }
+  }
+
+  // MARK: - Mul
+
+  public static func * (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.mul(other: rhs)
+
+    case let (.smi(smi), .heap(heap)),
+         let (.heap(heap), .smi(smi)):
+      let heapCopy = heap.copy()
+      heapCopy.mul(other: smi)
+      return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      lhs.sub(other: rhs)
+      let copy = lhs.copy()
+      copy.mul(other: rhs)
+      return BigInt(copy)
     }
   }
 
-  // MARK: - Add/sub to remove
+  public static func *= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.mul(other: rhs)
+      lhs.value = result.value
 
-  // Not needed if we conform to Binary int
-  public static func +<T: BinaryInteger> (lhs: BigInt, rhs: T) -> BigInt { fatalError() }
-  public static func -<T: BinaryInteger> (lhs: BigInt, rhs: T) -> BigInt { fatalError() }
+    case let (.smi(lhsSmi), .heap(rhs)):
+      // Unfortunately in this case we have to copy rhs
+      let rhsCopy = rhs.copy()
+      rhsCopy.mul(other: lhsSmi)
+      lhs.value = .heap(rhsCopy)
+      lhs.downgradeToSmiIfPossible() // probably not
 
-  // TODO: In mul check for special case of 0, 1 and -1
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.mul(other: rhs)
+      lhs.downgradeToSmiIfPossible() // probably not
 
-  // MARK: - Shift
-
-  internal func shiftLeft<T: BinaryInteger>(count: T) -> BigInt {
-    switch self.value {
-    case let .smi(smi):
-      return smi.shiftLeft(count: count)
-    case let .heap(heap):
-      trap("")
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.mul(other: rhs)
+      lhs.downgradeToSmiIfPossible() // probably not
     }
   }
 
-  internal func shiftLeft(count: BigInt) -> BigInt {
-    let normalized = count.normalized()
+  // MARK: - Div
 
-    switch normalized.value {
-    case let .smi(smi):
-      return self.shiftLeft(count: smi.value)
-    case let .heap(heap):
-      trap("Shifting by \(heap) is not supported.")
+  public static func / (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.div(other: rhs)
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.div(other: rhs)
+      return BigInt(lhsHeap)
+
+    case let (.heap(heap), .smi(smi)):
+      let heapCopy = heap.copy()
+      heapCopy.div(other: smi)
+      return BigInt(heapCopy)
+
+    case let (.heap(lhs), .heap(rhs)):
+      let copy = lhs.copy()
+      copy.div(other: rhs)
+      return BigInt(copy)
     }
   }
 
-  internal func shiftRight<T: BinaryInteger>(count: T) -> BigInt {
-    switch self.value {
-    case let .smi(smi):
-      return smi.shiftRight(count: count)
-    case let .heap(heap):
-      trap("")
+  public static func /= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.div(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.div(other: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.div(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.div(other: rhs)
+      lhs.downgradeToSmiIfPossible()
     }
   }
 
-  internal func shiftRight(count: BigInt) -> BigInt {
-    let normalized = count.normalized()
+  // MARK: - Mod
 
-    switch normalized.value {
+  public static func % (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.mod(other: rhs)
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.mod(other: rhs)
+      return BigInt(lhsHeap)
+
+    case let (.heap(heap), .smi(smi)):
+      let heapCopy = heap.copy()
+      heapCopy.mod(other: smi)
+      return BigInt(heapCopy)
+
+    case let (.heap(lhs), .heap(rhs)):
+      let copy = lhs.copy()
+      copy.mod(other: rhs)
+      return BigInt(copy)
+    }
+  }
+
+  public static func %= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.mod(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.mod(other: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.mod(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.mod(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+    }
+  }
+
+  // MARK: - Shift left
+
+  public static func << <T: BinaryInteger>(lhs: BigInt, rhs: T) -> BigInt {
+    switch lhs.value {
     case let .smi(smi):
-      return self.shiftRight(count: smi.value)
+      return smi.shiftLeft(count: rhs)
     case let .heap(heap):
-      trap("Shifting by \(heap) is not supported.")
+      let copy = heap.copy()
+      copy.shiftLeft(count: rhs)
+      return BigInt(copy)
+    }
+  }
+
+  public static func <<= <T: BinaryInteger>(lhs: inout BigInt, rhs: T) {
+    switch lhs.value {
+    case let .smi(smi):
+      let result = smi.shiftLeft(count: rhs)
+      lhs.value = result.value
+    case let .heap(heap):
+      heap.shiftLeft(count: rhs)
+    }
+  }
+
+  // MARK: - Shift right
+
+  public static func >> <T: BinaryInteger>(lhs: BigInt, rhs: T) -> BigInt {
+    switch lhs.value {
+    case let .smi(smi):
+      return smi.shiftRight(count: rhs)
+    case let .heap(heap):
+      let copy = heap.copy()
+      copy.shiftRight(count: rhs)
+      return BigInt(copy)
+    }
+  }
+
+  public static func >>= <T: BinaryInteger>(lhs: inout BigInt, rhs: T) {
+    switch lhs.value {
+    case let .smi(smi):
+      let result = smi.shiftRight(count: rhs)
+      lhs.value = result.value
+    case let .heap(heap):
+      heap.shiftRight(count: rhs)
     }
   }
 
@@ -235,10 +387,7 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     }
   }
 
-  internal var bin: String {
-    return self.toString(radix: 2, uppercase: false)
-  }
-
+  // TODO: String(radix:)
   // 'toString' because we Java now
   internal func toString(radix: Int, uppercase: Bool) -> String {
     precondition(2 <= radix && radix <= 36, "radix must be in range 2...36")
@@ -276,18 +425,6 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
       return heap < smi
     case let (.heap(lhs), .heap(rhs)):
       return lhs < rhs
-    }
-  }
-
-  // MARK: - Normalization
-
-  /// Convert to `smi` if possible.
-  private func normalized() -> BigInt {
-    switch self.value {
-    case .smi:
-      return self
-    case .heap(let heap):
-      return heap.asNormalizedBigInt
     }
   }
 }

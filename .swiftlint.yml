@@ -1,3 +1,7 @@
+included:
+  - Sources
+  - Tests
+
 line_length:
   warning: 100
   error:   120

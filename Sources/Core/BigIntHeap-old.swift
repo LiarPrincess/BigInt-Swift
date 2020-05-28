@@ -2,7 +2,7 @@
 // https://github.com/apple/swift/blob/master/test/Prototypes/BigInt.swift
 
 // swiftlint:disable file_length
-
+/*
 // TODO: Make it struct and store pointer to buffer, value at 0 will be count
 internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStringConvertible {
 
@@ -1037,3 +1037,4 @@ internal class BigIntHeap: Comparable, CustomStringConvertible, CustomDebugStrin
     return Smi(Smi.Storage(value))
   }
 }
+*/

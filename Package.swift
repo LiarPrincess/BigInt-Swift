@@ -12,7 +12,8 @@ let package = Package(
         .package(url: "https://github.com/attaswift/BigInt.git", from: "5.0.0")
     ],
     targets: [
-        .target(name: "Core", dependencies: ["BigInt"]),
+        .target(name: "Core", dependencies: ["BigIntProxy"]),
+        .target(name: "BigIntProxy", dependencies: ["BigInt"]),
         .testTarget(name: "CoreTests", dependencies: ["Core"]),
     ]
 )
