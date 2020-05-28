@@ -1,7 +1,9 @@
 // swiftlint:disable file_length
 
+// TODO: Docs
+
 public struct BigInt:
-//  SignedInteger, // Strideable
+  SignedInteger, // Strideable
   Comparable, Hashable,
   CustomStringConvertible, CustomDebugStringConvertible {
 
@@ -69,6 +71,26 @@ public struct BigInt:
   public var words: Words {
     return Words(self)
   }
+
+  public var bitWidth: Int {
+    switch self.value {
+    case let .smi(smi):
+      return smi.bitWidth
+    case let .heap(heap):
+      return heap.bitWidth
+    }
+  }
+
+  public var trailingZeroBitCount: Int {
+    switch self.value {
+    case let .smi(smi):
+      return smi.trailingZeroBitCount
+    case let .heap(heap):
+      return heap.trailingZeroBitCount
+    }
+  }
+
+  // TODO: minRequiredWidth
 
   public var magnitude: BigInt {
     switch self.value {

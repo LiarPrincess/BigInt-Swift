@@ -18,6 +18,14 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     return self.value.words
   }
 
+  internal var bitWidth: Int {
+    return self.value.bitWidth
+  }
+
+  internal var trailingZeroBitCount: Int {
+    return self.value.trailingZeroBitCount
+  }
+
   internal var magnitude: BigInt {
     let result = self.value.magnitude
     let resultHeap = BigIntHeap(value: result)
