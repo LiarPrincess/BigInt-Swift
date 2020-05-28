@@ -24,8 +24,24 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value = value
   }
 
+  internal init(value: BigIntProxy.Magnitude) {
+    self.value = BigIntProxy(sign: .plus, magnitude: value)
+  }
+
   internal init<T: BinaryInteger>(_ value: T) {
     self.value = BigIntProxy(value)
+  }
+
+  internal init<T: BinaryFloatingPoint>(_ source: T) {
+    self.value = BigIntProxy(source)
+  }
+
+  internal init?<T: BinaryFloatingPoint>(exactly source: T) {
+    guard let value = BigIntProxy(exactly: source) else {
+      return nil
+    }
+
+    self.value = value
   }
 
   // MARK: - Negate

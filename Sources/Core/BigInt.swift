@@ -1,8 +1,7 @@
 // swiftlint:disable file_length
 
 public struct BigInt:
-//  SignedInteger, BinaryInteger, ExpressibleByIntegerLiteral
-//  Strideable,
+//  SignedInteger, // Strideable
   Comparable, Hashable,
   CustomStringConvertible, CustomDebugStringConvertible {
 
@@ -30,7 +29,7 @@ public struct BigInt:
     self.value = .smi(Smi(0))
   }
 
-  internal init<T: BinaryInteger>(_ value: T) {
+  public init<T: BinaryInteger>(_ value: T) {
     if let smi = Smi(value) {
       self.value = .smi(smi)
     } else {
@@ -39,12 +38,39 @@ public struct BigInt:
     }
   }
 
-  internal init(smi value: Smi.Storage) {
-    self.value = .smi(Smi(value))
+  public init(integerLiteral value: Int) {
+    self.init(value)
   }
 
-  internal init(_ value: Smi) {
-    self.value = .smi(value)
+  public init?<T: BinaryInteger>(exactly source: T) {
+    self.init(source)
+  }
+
+  public init<T: BinaryInteger>(truncatingIfNeeded source: T) {
+    self.init(source)
+  }
+
+  public init<T: BinaryInteger>(clamping source: T) {
+    self.init(source)
+  }
+
+  public init<T: BinaryFloatingPoint>(_ source: T) {
+    let heap = BigIntHeap(source)
+    self.value = .heap(heap)
+    self.downgradeToSmiIfPossible()
+  }
+
+  public init?<T: BinaryFloatingPoint>(exactly source: T) {
+    guard let heap = BigIntHeap(exactly: source) else {
+      return nil
+    }
+
+    self.value = .heap(heap)
+    self.downgradeToSmiIfPossible()
+  }
+
+  internal init(smi value: Smi.Storage) {
+    self.value = .smi(Smi(value))
   }
 
   /// This will downgrade to `Smi` if possible
@@ -327,6 +353,8 @@ public struct BigInt:
 
   public typealias DivMod = (quotient: BigInt, remainder: BigInt)
 
+  // TODO: Move all promotions to BigIntHeap, search for 'BigIntHeap('
+  // TODO: Use this in Violet
   public func divMod(other: BigInt) -> DivMod {
     switch (self.value, other.value) {
     case let (.smi(lhs), .smi(rhs)):
