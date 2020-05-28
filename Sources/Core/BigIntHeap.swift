@@ -26,6 +26,12 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     return self.value.trailingZeroBitCount
   }
 
+  internal var minRequiredWidth: Int {
+    // Important:
+    // This depends on the 'BigInt' library that we are using!
+    return self.value.bitWidth
+  }
+
   internal var magnitude: BigInt {
     let result = self.value.magnitude
     let resultHeap = BigIntHeap(value: result)

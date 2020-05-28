@@ -1,10 +1,9 @@
 // swiftlint:disable file_length
 
-// TODO: Docs
-
+/// Unlimited, signed integer.
 public struct BigInt:
-  SignedInteger, // Strideable
-  Comparable, Hashable,
+  SignedInteger,
+  Comparable, Hashable, Strideable,
   CustomStringConvertible, CustomDebugStringConvertible {
 
   // MARK: - Helper types
@@ -68,10 +67,16 @@ public struct BigInt:
 
   internal private(set) var value: Storage
 
+  /// A collection containing the words of this value’s binary representation,
+  /// in order from the least significant to most significant.
   public var words: Words {
     return Words(self)
   }
 
+  /// The number of bits used for the underlying binary representation of
+  /// values of this type.
+  ///
+  /// For example: bit width of a `Int64` instance is 64.
   public var bitWidth: Int {
     switch self.value {
     case let .smi(smi):
@@ -81,6 +86,7 @@ public struct BigInt:
     }
   }
 
+  /// The number of trailing zeros in this value’s binary representation.
   public var trailingZeroBitCount: Int {
     switch self.value {
     case let .smi(smi):
@@ -90,8 +96,27 @@ public struct BigInt:
     }
   }
 
-  // TODO: minRequiredWidth
+  /// Minimal number of bits necessary to represent `self` in binary.
+  /// `bitLength` in Python.
+  ///
+  /// ```py
+  /// >>> bin(37)
+  /// '0b100101'
+  /// >>> (37).bit_length()
+  /// 6
+  /// ```
+  public var minRequiredWidth: Int {
+    switch self.value {
+    case let .smi(smi):
+      return smi.minRequiredWidth
+    case let .heap(heap):
+      return heap.minRequiredWidth
+    }
+  }
 
+  /// The magnitude of this value.
+  ///
+  /// For any numeric value `x`, `x.magnitude` is the absolute value of `x`.
   public var magnitude: BigInt {
     switch self.value {
     case let .smi(smi):
@@ -432,7 +457,7 @@ public struct BigInt:
   public typealias DivMod = (quotient: BigInt, remainder: BigInt)
 
   // TODO: Move all promotions to BigIntHeap, search for 'BigIntHeap('
-  // TODO: Use this in Violet
+  // TODO: Use this in Violet (and also power)
   public func divMod(other: BigInt) -> DivMod {
     switch (self.value, other.value) {
     case let (.smi(lhs), .smi(rhs)):
