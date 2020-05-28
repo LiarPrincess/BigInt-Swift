@@ -12,6 +12,12 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
 
   private var value: BigIntProxy
 
+  internal var magnitude: BigInt {
+    let result = self.value.magnitude
+    let resultHeap = BigIntHeap(value: result)
+    return BigInt(resultHeap)
+  }
+
   // MARK: - Init
 
   internal init(value: BigIntProxy) {

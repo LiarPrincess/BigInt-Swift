@@ -22,6 +22,11 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
     return !self.isNegative
   }
 
+  internal var magnitude: BigInt {
+    let result = self.value.magnitude
+    return BigInt(result)
+  }
+
   internal var minRequiredWidth: Int {
     return self.value.minRequiredWidth
   }

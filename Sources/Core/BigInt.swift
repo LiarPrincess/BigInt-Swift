@@ -15,6 +15,15 @@ public struct BigInt:
 
   internal private(set) var value: Storage
 
+  public var magnitude: BigInt {
+    switch self.value {
+    case let .smi(smi):
+      return smi.magnitude
+    case let .heap(heap):
+      return heap.magnitude
+    }
+  }
+
   // MARK: - Init
 
   public init() {
