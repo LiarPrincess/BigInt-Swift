@@ -106,6 +106,39 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     return (quotient: quotient, remainder: remainder)
   }
 
+  // MARK: - And
+
+  internal func and(other: Smi) {
+    let big = BigIntProxy(other.value)
+    self.value &= big
+  }
+
+  internal func and(other: BigIntHeap) {
+    self.value &= other.value
+  }
+
+  // MARK: - Or
+
+  internal func or(other: Smi) {
+    let big = BigIntProxy(other.value)
+    self.value |= big
+  }
+
+  internal func or(other: BigIntHeap) {
+    self.value |= other.value
+  }
+
+  // MARK: - Xor
+
+  internal func xor(other: Smi) {
+    let big = BigIntProxy(other.value)
+    self.value ^= big
+  }
+
+  internal func xor(other: BigIntHeap) {
+    self.value ^= other.value
+  }
+
   // MARK: - Shift left
 
   internal func shiftLeft<T: BinaryInteger>(count: T) {

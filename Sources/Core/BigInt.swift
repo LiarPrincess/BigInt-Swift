@@ -357,6 +357,132 @@ public struct BigInt:
     return (quotient: quotient, remainder: remainder)
   }
 
+  // MARK: - And
+
+  public static func & (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.and(other: rhs)
+
+    case let (.smi(smi), .heap(heap)),
+         let (.heap(heap), .smi(smi)):
+      let heapCopy = heap.copy()
+      heapCopy.and(other: smi)
+      return BigInt(heapCopy)
+
+    case let (.heap(lhs), .heap(rhs)):
+      let copy = lhs.copy()
+      copy.and(other: rhs)
+      return BigInt(copy)
+    }
+  }
+
+  public static func &= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.and(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.and(other: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.and(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.and(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+    }
+  }
+
+  // MARK: - Or
+
+  public static func | (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.or(other: rhs)
+
+    case let (.smi(smi), .heap(heap)),
+         let (.heap(heap), .smi(smi)):
+      let heapCopy = heap.copy()
+      heapCopy.or(other: smi)
+      return BigInt(heapCopy)
+
+    case let (.heap(lhs), .heap(rhs)):
+      let copy = lhs.copy()
+      copy.or(other: rhs)
+      return BigInt(copy)
+    }
+  }
+
+  public static func |= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.or(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.or(other: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.or(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.or(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+    }
+  }
+
+  // MARK: - Xor
+
+  public static func ^ (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.xor(other: rhs)
+
+    case let (.smi(smi), .heap(heap)),
+         let (.heap(heap), .smi(smi)):
+      let heapCopy = heap.copy()
+      heapCopy.xor(other: smi)
+      return BigInt(heapCopy)
+
+    case let (.heap(lhs), .heap(rhs)):
+      let copy = lhs.copy()
+      copy.xor(other: rhs)
+      return BigInt(copy)
+    }
+  }
+
+  public static func ^= (lhs: inout BigInt, rhs: BigInt) {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.xor(other: rhs)
+      lhs.value = result.value
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      let lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.xor(other: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .smi(rhs)):
+      lhsHeap.xor(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+
+    case let (.heap(lhsHeap), .heap(rhs)):
+      lhsHeap.xor(other: rhs)
+      lhs.downgradeToSmiIfPossible()
+    }
+  }
+
   // MARK: - Shift left
 
   public static func << <T: BinaryInteger>(lhs: BigInt, rhs: T) -> BigInt {
