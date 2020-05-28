@@ -410,7 +410,6 @@ public struct BigInt: Comparable, CustomStringConvertible, CustomDebugStringConv
     }
   }
 
-  // TODO: String(radix:)
   // 'toString' because we Java now
   internal func toString(radix: Int, uppercase: Bool) -> String {
     precondition(2 <= radix && radix <= 36, "radix must be in range 2...36")
