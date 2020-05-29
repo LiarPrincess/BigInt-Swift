@@ -456,7 +456,6 @@ public struct BigInt:
 
   public typealias DivMod = (quotient: BigInt, remainder: BigInt)
 
-  // TODO: Move all promotions to BigIntHeap, search for 'BigIntHeap('
   // TODO: Use this in Violet (and also power)
   public func divMod(other: BigInt) -> DivMod {
     switch (self.value, other.value) {

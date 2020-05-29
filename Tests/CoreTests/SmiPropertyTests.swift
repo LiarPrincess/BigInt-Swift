@@ -43,26 +43,83 @@ class SmiPropertyTests: XCTestCase {
 
   // MARK: - Is negative
 
-  func test_isNegative() {
-    self.negative(0, isNegative: false)
+  func test_isPositive_isNegative() {
+    self.positiveNegative(0, isPositive: true)
 
-    self.negative(1, isNegative: false)
-    self.negative(max, isNegative: false)
-    self.negative(maxHalf, isNegative: false)
-    self.negative(maxMinus1, isNegative: false)
+    self.positiveNegative(1, isPositive: true)
+    self.positiveNegative(max, isPositive: true)
+    self.positiveNegative(maxHalf, isPositive: true)
+    self.positiveNegative(maxMinus1, isPositive: true)
 
-    self.negative(-1, isNegative: true)
-    self.negative(min, isNegative: true)
-    self.negative(minHalf, isNegative: true)
-    self.negative(minPlus1, isNegative: true)
+    self.positiveNegative(-1, isPositive: false)
+    self.positiveNegative(min, isPositive: false)
+    self.positiveNegative(minHalf, isPositive: false)
+    self.positiveNegative(minPlus1, isPositive: false)
   }
 
-  private func negative(_ value: Int32,
-                        isNegative: Bool,
-                        file: StaticString = #file,
-                        line: UInt = #line) {
+  private func positiveNegative(_ value: Int32,
+                                isPositive: Bool,
+                                file: StaticString = #file,
+                                line: UInt = #line) {
     let smi = Smi(value)
-    XCTAssertEqual(smi.isNegative, isNegative, file: file, line: line)
+    let isNegative = !isPositive
+    XCTAssertEqual(smi.isPositive, isPositive, "isPositive", file: file, line: line)
+    XCTAssertEqual(smi.isNegative, isNegative, "isNegative", file: file, line: line)
+  }
+
+  // MARK: - Trailing zero bit count
+
+  func test_trailingZeroBitCount() {
+    self.trailingZeroBitCount(0)
+
+    self.trailingZeroBitCount(1)
+    self.trailingZeroBitCount(max)
+    self.trailingZeroBitCount(maxHalf)
+    self.trailingZeroBitCount(maxMinus1)
+
+    self.trailingZeroBitCount(-1)
+    self.trailingZeroBitCount(min)
+    self.trailingZeroBitCount(minHalf)
+    self.trailingZeroBitCount(minPlus1)
+
+    for i in 0..<(Storage.bitWidth - 1) {
+      let value = Storage(1 << i)
+      print(bin(value))
+      self.trailingZeroBitCount(value, expected: i)
+    }
+  }
+
+  private func trailingZeroBitCount(_ value: Int32,
+                                    expected: Int? = nil,
+                                    file: StaticString = #file,
+                                    line: UInt = #line) {
+    let smi = Smi(value)
+    let expected = expected ?? Storage(value).trailingZeroBitCount
+    XCTAssertEqual(smi.trailingZeroBitCount, expected, file: file, line: line)
+  }
+
+  // MARK: - Magnitude
+
+  func test_magnitude() {
+    self.magnitude(0)
+
+    self.magnitude(1)
+    self.magnitude(max)
+    self.magnitude(maxHalf)
+    self.magnitude(maxMinus1)
+
+    self.magnitude(-1)
+    self.magnitude(min)
+    self.magnitude(minHalf)
+    self.magnitude(minPlus1)
+  }
+
+  private func magnitude(_ value: Int32,
+                         file: StaticString = #file,
+                         line: UInt = #line) {
+    let smi = Smi(value)
+    let expected = Int(value).magnitude
+    XCTAssertEqual(smi.magnitude, BigInt(expected), file: file, line: line)
   }
 
   // MARK: - Min required width

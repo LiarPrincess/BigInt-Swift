@@ -1,7 +1,7 @@
 import XCTest
 @testable import Core
 
-class BigIntTests: XCTestCase {
+class BigIntMemoryLayoutTests: XCTestCase {
 
   func test_size() {
     XCTAssertEqual(MemoryLayout<BigInt>.size, 8)

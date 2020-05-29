@@ -16,11 +16,11 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
   }
 
   internal var isNegative: Bool {
-    return self.value < Storage(0)
+    return self.value.isNegative
   }
 
   internal var isPositive: Bool {
-    return !self.isNegative
+    return self.value.isPositive
   }
 
   internal var words: Words {
@@ -201,9 +201,7 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
     // This has the same assumptions for overflow as 'div'.
     // Please check 'div' for details.
 
-    if other.value == 0 {
-      _ = self.value % other.value // Well, hello there...
-    }
+    precondition(other.value != 0, "Division by zero") // Well, hello there...
 
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))
@@ -308,16 +306,6 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
   internal func hash(into hasher: inout Hasher) {
     hasher.combine(self.value)
-  }
-
-  // MARK: - Strideable
-
-  internal func distance(to other: Smi) -> BigInt {
-    return other.sub(other: self)
-  }
-
-  internal func advanced(by n: Smi) -> BigInt {
-    return self.add(other: n)
   }
 
   // MARK: - As heap

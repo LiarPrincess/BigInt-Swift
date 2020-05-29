@@ -28,8 +28,9 @@ extension BinaryInteger {
     return self == .zero
   }
 
+  /// Including `0`.
   internal var isPositive: Bool {
-    return self > .zero
+    return self >= .zero
   }
 
   internal var isNegative: Bool {
