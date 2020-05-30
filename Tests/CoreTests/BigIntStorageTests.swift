@@ -28,7 +28,7 @@ class BigIntStorageTests: XCTestCase {
   }
 
   func test_subscript_set() {
-    let storage: BigIntStorage = [0, 1, 2, 3]
+    var storage: BigIntStorage = [0, 1, 2, 3]
 
     for i in 0..<storage.count {
       storage[i] += 1
@@ -41,9 +41,10 @@ class BigIntStorageTests: XCTestCase {
   func test_append() {
     let count = 4
     var storage = BigIntStorage(minimumCapacity: count)
+    let token = storage.guaranteeUniqueBufferReference()
 
     for i in 0..<count {
-      storage.append(Word(i))
+      storage.append(Word(i), token: token)
     }
 
     for i in 0..<count {
@@ -53,14 +54,15 @@ class BigIntStorageTests: XCTestCase {
 
   func test_append_withGrow() {
     var storage = BigIntStorage(minimumCapacity: 4)
+    let token = storage.guaranteeUniqueBufferReference()
 
     let oldCapacity = storage.capacity
     for i in 0..<oldCapacity {
-      storage.append(Word(i))
+      storage.append(Word(i), token: token)
     }
     XCTAssertEqual(storage.capacity, oldCapacity)
 
-    storage.append(100)
+    storage.append(100, token: token)
 
     XCTAssertNotEqual(storage.capacity, oldCapacity)
     XCTAssertGreaterThan(storage.capacity, oldCapacity)

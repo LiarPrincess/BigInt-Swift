@@ -1,13 +1,13 @@
 import Foundation
 
-/// The binary representation of the value's magnitude,
+/// The binary representation of the `BigInt`,
 /// with the least significant word at index `0`.
 ///
 /// It has no trailing zero elements.
 /// If `self.isZero`, then `isNegative == false` and `self.isEmpty == true`.
 internal struct BigIntStorage:
   RandomAccessCollection, ExpressibleByArrayLiteral,
-  CustomStringConvertible {
+  Equatable, CustomStringConvertible {
 
   // MARK: - Helper types
 
@@ -197,6 +197,25 @@ internal struct BigIntStorage:
 
   internal mutating func addMagnitude(other: Smi.Storage, token: UniqueToken) {
     fatalError()
+  }
+
+  // MARK: - Equatable
+
+  internal static func == (lhs: Self, rhs: Self) -> Bool {
+    let lhsHeader = lhs.buffer.header
+    let rhsHeader = rhs.buffer.header
+
+    guard lhsHeader.countAndSign == rhsHeader.countAndSign else {
+      return false
+    }
+
+    for (l, r) in zip(lhs, rhs) {
+      guard l == r else {
+        return false
+      }
+    }
+
+    return true
   }
 
   // MARK: - String

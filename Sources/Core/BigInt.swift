@@ -41,10 +41,6 @@ public struct BigInt:
       }
     }
 
-    public var indices: Indices {
-      return 0..<self.count
-    }
-
     public var startIndex: Int {
       return 0
     }

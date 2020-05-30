@@ -13,17 +13,12 @@ internal struct BigIntNew {
   }
 }
 
-internal struct BigIntHeapNew {
+internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
   internal typealias Word = BigIntStorage.Word
 
   // MARK: - Properties
 
-  /// The binary representation of the value's magnitude,
-  /// with the least significant word at index `0`.
-  ///
-  /// - `data` has no trailing zero elements
-  /// - If `self == 0`, then `isNegative == false` and `data == []`
   private var storage: BigIntStorage
 
   private var isZero: Bool {
@@ -116,32 +111,83 @@ internal struct BigIntHeapNew {
   }
 
   // MARK: - Init
-  /*
 
-  internal init(value: BigIntProxy) {
-    self.value = value
+  /// Init with storage set to `0`.
+  private init() {
+    self.storage = BigIntStorage(minimumCapacity: 0)
   }
 
-  internal init(value: BigIntProxy.Magnitude) {
-    self.value = BigIntProxy(sign: .plus, magnitude: value)
+  private init(minimumStorageCapacity: Int) {
+    self.storage = BigIntStorage(minimumCapacity: minimumStorageCapacity)
   }
 
   internal init<T: BinaryInteger>(_ value: T) {
-    self.value = BigIntProxy(value)
+    self.init(minimumStorageCapacity: 1)
+    let token = self.storage.guaranteeUniqueBufferReference()
+
+    if !value.isZero {
+      let word = Word(value.magnitude)
+      self.storage.append(word, token: token)
+
+      if value.isNegative {
+        self.storage.toggleIsNegative(token: token)
+      }
+    }
+
+    self.storage.checkInvariants()
   }
 
+  internal init(integerLiteral value: Int) {
+    self.init(value)
+  }
+
+  // Source:
+  // https://github.com/benrimmington/swift-numerics/blob/BigInt/Sources/BigIntModule/BigInt.swift
   internal init<T: BinaryFloatingPoint>(_ source: T) {
-    self.value = BigIntProxy(source)
+    precondition(
+      source.isFinite,
+      "\(type(of: source)) value cannot be converted to BigInt because it is either infinite or NaN"
+    )
+
+    if source.isZero {
+      self.init()
+      return
+    }
+
+    var float = source < .zero ? -source : source
+    if float < 1.0 {
+      self.init()
+      return
+    }
+
+    self.init(minimumStorageCapacity: 4)
+    let token = self.storage.guaranteeUniqueBufferReference()
+
+    let radix = T(sign: .plus, exponent: T.Exponent(Word.bitWidth), significand: 1)
+    repeat {
+      let word = Word(float.truncatingRemainder(dividingBy: radix))
+      self.storage.append(word, token: token)
+      float = (float / radix).rounded(.towardZero)
+    } while !float.isZero
+
+    if source < .zero {
+      self.storage.toggleIsNegative(token: token)
+    }
+
+    self.storage.checkInvariants()
   }
 
   internal init?<T: BinaryFloatingPoint>(exactly source: T) {
-    guard let value = BigIntProxy(exactly: source) else {
+    guard source.isFinite else {
       return nil
     }
 
-    self.value = value
+    guard source == source.rounded(.towardZero) else {
+      return nil
+    }
+
+    self.init(source)
   }
- */
 
   // MARK: - Unary
 
@@ -169,4 +215,10 @@ internal struct BigIntHeapNew {
   // MARK: - Add
 
   private mutating func add(other: Smi.Storage) { }
+
+  // MARK: - Equatable
+
+  internal static func == (lhs: Self, rhs: Self) -> Bool {
+    return lhs.storage == rhs.storage
+  }
 }
