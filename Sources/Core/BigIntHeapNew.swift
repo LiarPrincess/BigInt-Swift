@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 internal struct BigIntNew {
 
   internal enum Storage {
@@ -218,7 +220,123 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
   // MARK: - Equatable
 
-  internal static func == (lhs: Self, rhs: Self) -> Bool {
+  internal static func == (heap: BigIntHeapNew, smi: Smi) -> Bool {
+    // Different signs are never equal
+    guard heap.isNegative == smi.isNegative else {
+      return false
+    }
+
+    let lhs = heap.storage
+    let rhs = Word(smi.value.magnitude)
+    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
+    case .equal:
+      return true
+    case .less,
+         .greater:
+      return false
+    }
+  }
+
+  internal static func == (lhs: BigIntHeapNew, rhs: BigIntHeapNew) -> Bool {
     return lhs.storage == rhs.storage
+  }
+
+  // MARK: - Comparable
+
+  internal static func >= (heap: BigIntHeapNew, smi: Smi) -> Bool {
+    // Negative values are always smaller than positive ones (because math...)
+    guard heap.isNegative == smi.isNegative else {
+      return smi.isNegative
+    }
+
+    let lhs = heap.storage
+    let rhs = Word(smi.value.magnitude)
+    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
+    case .equal,
+         .greater:
+      return true
+    case .less:
+      return false
+    }
+  }
+
+  internal static func < (heap: BigIntHeapNew, smi: Smi) -> Bool {
+    // Negative values are always smaller than positive ones (because math...)
+    guard heap.isNegative == smi.isNegative else {
+      return heap.isNegative
+    }
+
+    let lhs = heap.storage
+    let rhs = Word(smi.value.magnitude)
+    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
+    case .less:
+      return true
+    case .equal,
+         .greater:
+      return false
+    }
+  }
+
+  internal static func < (lhs: BigIntHeapNew, rhs: BigIntHeapNew) -> Bool {
+    // Negative values are always smaller than positive ones (because math...)
+    guard lhs.isNegative == rhs.isNegative else {
+      return lhs.isNegative
+    }
+
+    switch Self.compareMagnitudes(lhs: lhs.storage, rhs: rhs.storage) {
+    case .less:
+      return true
+    case .equal,
+         .greater:
+      return false
+    }
+  }
+
+  private enum CompareMagnitudes {
+    case equal
+    case less
+    case greater
+  }
+
+  private static func compareMagnitudes(lhs: BigIntStorage,
+                                        rhs: Word) -> CompareMagnitudes {
+    // If we have more words than 1 then we are our of range of smi
+    if lhs.count > 1 {
+      return .greater
+    }
+
+    // We have only 1 word in heap -> compare with value
+    let lhsWord = lhs[0]
+    let rhsWord = Word(rhs.magnitude)
+    return lhsWord == rhsWord ? .equal :
+           lhsWord > rhsWord ? .greater :
+          .less
+  }
+
+  private static func compareMagnitudes(lhs: BigIntStorage,
+                                        rhs: BigIntStorage) -> CompareMagnitudes {
+    // Shorter number is always smaller
+    guard lhs.count == rhs.count else {
+      return lhs.count < rhs.count ? .less : .greater
+    }
+
+    // Compare from most significant word
+    let indices = stride(from: lhs.count, through: 0, by: -1)
+    for index in indices {
+      let lhsWord = lhs[index]
+      let rhsWord = rhs[index]
+
+      if lhsWord < rhsWord {
+        return .less
+      }
+
+      if lhsWord > rhsWord {
+        return .greater
+      }
+
+      // Equal -> compare next word
+    }
+
+    return .equal
   }
 }

@@ -292,13 +292,13 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
   // MARK: - Equatable
 
-  internal static func == (lhs: Self, rhs: Self) -> Bool {
+  internal static func == (lhs: Smi, rhs: Smi) -> Bool {
     return lhs.value == rhs.value
   }
 
   // MARK: - Comparable
 
-  internal static func < (lhs: Self, rhs: Self) -> Bool {
+  internal static func < (lhs: Smi, rhs: Smi) -> Bool {
     return lhs.value < rhs.value
   }
 
