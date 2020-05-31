@@ -54,8 +54,7 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
       // This does not happen very often.
       if let last = self.storage.last, last >> (Word.bitWidth - 1) == 1 {
         var copy = self.storage
-        let token = copy.guaranteeUniqueBufferReference()
-        copy.append(0, token: token)
+        copy.append(0)
         return copy
       }
 
@@ -66,9 +65,8 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
     // At this point our 'storage' holds positive number, so we have 2 complement it.
     var copy = self.storage
-    let token = copy.guaranteeUniqueBufferReference()
-    copy.map(fn: ~, token: token)
-    copy.addMagnitude(other: 1, token: token)
+    copy.transformEveryWord(fn: ~) // Invert every word
+    Self.addMagnitude(lhs: &copy, rhs: 1)
     return copy
   }
 
@@ -125,14 +123,13 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
   internal init<T: BinaryInteger>(_ value: T) {
     self.init(minimumStorageCapacity: 1)
-    let token = self.storage.guaranteeUniqueBufferReference()
 
     if !value.isZero {
       let word = Word(value.magnitude)
-      self.storage.append(word, token: token)
+      self.storage.append(word)
 
       if value.isNegative {
-        self.storage.toggleIsNegative(token: token)
+        self.storage.isNegative.toggle()
       }
     }
 
@@ -163,17 +160,16 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
     }
 
     self.init(minimumStorageCapacity: 4)
-    let token = self.storage.guaranteeUniqueBufferReference()
 
     let radix = T(sign: .plus, exponent: T.Exponent(Word.bitWidth), significand: 1)
     repeat {
       let word = Word(float.truncatingRemainder(dividingBy: radix))
-      self.storage.append(word, token: token)
+      self.storage.append(word)
       float = (float / radix).rounded(.towardZero)
     } while !float.isZero
 
     if source < .zero {
-      self.storage.toggleIsNegative(token: token)
+      self.storage.isNegative = true
     }
 
     self.storage.checkInvariants()
@@ -193,8 +189,6 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
   // MARK: - Unary
 
-  /// void
-  /// mpz_neg (mpz_t r, const mpz_t u)
   internal mutating func negate() {
     // Zero is always positive
     if self.isZero {
@@ -202,16 +196,14 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
       return
     }
 
-    let token = self.storage.guaranteeUniqueBufferReference()
-    self.storage.toggleIsNegative(token: token)
+    self.storage.isNegative.toggle()
     self.storage.checkInvariants()
   }
 
-  /// void
-  /// mpz_com (mpz_t r, const mpz_t u)
   internal mutating func invert() {
     self.add(other: 1)
     self.negate()
+    self.storage.checkInvariants()
   }
 
   // MARK: - Add

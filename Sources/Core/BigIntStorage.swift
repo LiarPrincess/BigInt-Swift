@@ -1,13 +1,17 @@
 import Foundation
 
-/// The binary representation of the `BigInt`,
+// swiftlint:disable file_length
+
+/// The binary representation of the `BigInt` on the heap,
 /// with the least significant word at index `0`.
 ///
 /// It has no trailing zero elements.
 /// If `self.isZero`, then `isNegative == false` and `self.isEmpty == true`.
-internal struct BigIntStorage:
-  RandomAccessCollection, ExpressibleByArrayLiteral,
-  Equatable, CustomStringConvertible {
+///
+/// - Important:
+/// All of the mutating functions have to call
+/// `guaranteeUniqueBufferReference` first.
+internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringConvertible {
 
   // MARK: - Helper types
 
@@ -39,12 +43,40 @@ internal struct BigIntStorage:
   }
 
   internal var isNegative: Bool {
-    return self.buffer.header.countAndSign < 0
+    get {
+      return self.buffer.header.countAndSign < 0
+    }
+    set {
+      // Avoid copy.
+      // This check is free because we have to get header from the memory anyway.
+      if self.isNegative == newValue {
+        return
+      }
+
+      self.guaranteeUniqueBufferReference()
+      let sign = newValue ? -1 : 1
+      self.buffer.header.countAndSign = sign * self.count
+    }
   }
 
-  internal var count: Int {
-    let raw = self.buffer.header.countAndSign
-    return raw < 0 ? -raw : raw
+  internal private(set) var count: Int {
+    get {
+      let raw = self.buffer.header.countAndSign
+      return raw < 0 ? -raw : raw
+    }
+    set {
+      assert(newValue >= 0)
+
+      // Avoid copy.
+      // This check is free because we have to get header from the memory anyway.
+      if self.count == newValue {
+        return
+      }
+
+      self.guaranteeUniqueBufferReference()
+      let sign = self.isNegative ? -1 : 1
+      self.buffer.header.countAndSign = sign * newValue
+    }
   }
 
   internal var capacity: Int {
@@ -59,37 +91,10 @@ internal struct BigIntStorage:
     return self.count
   }
 
-  // MARK: - Setters
-
-  internal mutating func toggleIsNegative(token: UniqueToken) {
-    self.buffer.header.countAndSign = -self.buffer.header.countAndSign
-  }
-
-  internal mutating func setIsNegative(_ value: Bool, token: UniqueToken) {
-    let sign = value ? -1 : 1
-    self.buffer.header.countAndSign = sign * self.count
-  }
-
-  private mutating func setCount(_ value: Int, token: UniqueToken) {
-    assert(value >= 0)
-    let sign = self.isNegative ? -1 : 1
-    self.buffer.header.countAndSign = sign * value
-  }
-
   // MARK: - Init
 
   internal init(minimumCapacity: Int) {
     self.buffer = Self.createBuffer(minimumCapacity: minimumCapacity)
-  }
-
-  internal init(arrayLiteral elements: Word...) {
-    self.init(minimumCapacity: elements.count)
-
-    // Well, we have just created this buffer... it is trivially unique
-    let token = UniqueToken()
-    for element in elements {
-      self.append(element, token: token)
-    }
   }
 
   // MARK: - Create buffer
@@ -136,39 +141,46 @@ internal struct BigIntStorage:
 
   internal subscript(index: Int) -> Word {
     get {
-      assert(0 <= index && index < self.count, "Index out of range")
+      self.checkIndex(index: index)
       return self.buffer.withUnsafeMutablePointerToElements { ptr in
         ptr.advanced(by: index).pointee
       }
     }
     set {
-      let token = self.guaranteeUniqueBufferReference()
-      self.setIndex(index: index, value: newValue, token: token)
+      self.checkIndex(index: index)
+      self.guaranteeUniqueBufferReference()
+      self.buffer.withUnsafeMutablePointerToElements { ptr in
+        ptr.advanced(by: index).pointee = newValue
+      }
     }
   }
 
-  internal mutating func setIndex(index: Int, value: Word, token: UniqueToken) {
+  private func checkIndex(index: Int) {
+    // 'Assert' instead of 'precondition', because we control all of the
+    // callers (this type is internal).
+    // And also because we are cocky.
     assert(0 <= index && index < self.count, "Index out of range")
-    self.buffer.withUnsafeMutablePointerToElements { ptr in
-      ptr.advanced(by: index).pointee = value
-    }
   }
 
   // MARK: - Append
 
-  internal mutating func append(_ element: Word, token: UniqueToken) {
+  /// Add given `Word` to the buffer.
+  internal mutating func append(_ element: Word) {
+    self.guaranteeUniqueBufferReference()
+
     if self.count == self.capacity {
-      self.grow(token: token)
+      self.grow()
     }
 
     self.buffer.withUnsafeMutablePointerToElements { ptr in
       ptr.advanced(by: self.count).pointee = element
     }
 
-    self.setCount(self.count + 1, token: token)
+    self.count += 1
   }
 
-  private mutating func grow(token: UniqueToken) {
+  /// Assumes that `self.guaranteeUniqueBufferReference` was already called!
+  private mutating func grow() {
     let new = Self.createBuffer(
       minimumCapacity: Swift.max(2 * self.capacity, 1),
       header: self.buffer.header
@@ -178,9 +190,42 @@ internal struct BigIntStorage:
     self.buffer = new
   }
 
-  // MARK: - Map
+  // MARK: - Set
 
-  internal mutating func map(fn: (Word) -> Word, token: UniqueToken) {
+  /// Set `self` to represent given `UInt`.
+  internal mutating func set(to value: UInt) {
+    self.guaranteeUniqueBufferReference()
+
+    if value.isZero {
+      self.count = 0
+      self.isNegative = false
+    } else {
+      self.count = 0
+      self.append(value)
+      self.isNegative = false
+    }
+  }
+
+  /// Set `self` to represent given `Int`.
+  internal mutating func set(to value: Int) {
+    self.guaranteeUniqueBufferReference()
+
+    if value.isZero {
+      self.count = 0
+      self.isNegative = false
+    } else {
+      self.count = 0
+      self.append(value.magnitude)
+      self.isNegative = value.isNegative
+    }
+  }
+
+  // MARK: - Transform
+
+  /// Apply given function to every word
+  internal mutating func transformEveryWord(fn: (Word) -> Word) {
+    self.guaranteeUniqueBufferReference()
+
     self.buffer.withUnsafeMutablePointerToElements { startPtr in
       let endPtr = startPtr.advanced(by: self.count)
 
@@ -191,31 +236,6 @@ internal struct BigIntStorage:
         ptr = ptr.successor()
       }
     }
-  }
-
-  // MARK: - Add
-
-  internal mutating func addMagnitude(other: Smi.Storage, token: UniqueToken) {
-    fatalError()
-  }
-
-  // MARK: - Equatable
-
-  internal static func == (lhs: Self, rhs: Self) -> Bool {
-    let lhsHeader = lhs.buffer.header
-    let rhsHeader = rhs.buffer.header
-
-    guard lhsHeader.countAndSign == rhsHeader.countAndSign else {
-      return false
-    }
-
-    for (l, r) in zip(lhs, rhs) {
-      guard l == r else {
-        return false
-      }
-    }
-
-    return true
   }
 
   // MARK: - String
@@ -245,17 +265,36 @@ internal struct BigIntStorage:
     return result
   }
 
+  // MARK: - Equatable
+
+  internal static func == (lhs: Self, rhs: Self) -> Bool {
+    let lhsHeader = lhs.buffer.header
+    let rhsHeader = rhs.buffer.header
+
+    guard lhsHeader.countAndSign == rhsHeader.countAndSign else {
+      return false
+    }
+
+    for (l, r) in zip(lhs, rhs) {
+      guard l == r else {
+        return false
+      }
+    }
+
+    return true
+  }
+
   // MARK: - Invariants
 
-  internal mutating func fixInvariants(token: UniqueToken) {
+  internal mutating func fixInvariants() {
     // Trim prefix zeros
     while let last = self.last, last.isZero {
-      self.setCount(self.count - 1, token: token)
+      self.count -= 1
     }
 
     // Zero is always positive
     if self.isEmpty {
-      self.setIsNegative(false, token: token)
+      self.isNegative = false
     }
   }
 
@@ -270,13 +309,9 @@ internal struct BigIntStorage:
 
   // MARK: - Helpers
 
-  /// Things can get complicated and defensively calling
-  /// `guaranteeUniqueBufferReference` is `meh`.
-  internal struct UniqueToken { }
-
-  internal mutating func guaranteeUniqueBufferReference() -> UniqueToken {
+  private mutating func guaranteeUniqueBufferReference() {
     if self.buffer.isUniqueReference() {
-      return UniqueToken()
+      return
     }
 
     // Well... shit
@@ -286,9 +321,6 @@ internal struct BigIntStorage:
     )
 
     Self.memcpy(dst: new, src: self.buffer, count: self.count)
-    // At this point 'self.buffer' is not uniquely referenced because
-    // well... we still reference it in 'new'.
-    return UniqueToken()
   }
 
   private static func memcpy(dst: Buffer, src: Buffer, count: Int) {
