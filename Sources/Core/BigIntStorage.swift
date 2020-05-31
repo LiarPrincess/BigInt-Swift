@@ -166,28 +166,13 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Add given `Word` to the buffer.
   internal mutating func append(_ element: Word) {
-    self.guaranteeUniqueBufferReference()
-
-    if self.count == self.capacity {
-      self.grow()
-    }
+    self.guaranteeUniqueBufferReference(withMinimumCapacity: self.count + 1)
 
     self.buffer.withUnsafeMutablePointerToElements { ptr in
       ptr.advanced(by: self.count).pointee = element
     }
 
     self.count += 1
-  }
-
-  /// Assumes that `self.guaranteeUniqueBufferReference` was already called!
-  private mutating func grow() {
-    let new = Self.createBuffer(
-      minimumCapacity: Swift.max(2 * self.capacity, 1),
-      header: self.buffer.header
-    )
-
-    Self.memcpy(dst: new, src: self.buffer, count: self.count)
-    self.buffer = new
   }
 
   // MARK: - Set
@@ -307,8 +292,11 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
   }
 
-  // MARK: - Helpers
+  // MARK: - Unique
 
+  /// DO NOT merge this method with
+  /// `guaranteeUniqueBufferReference(withMinimumCapacity)`!
+  /// That methods has growing logic inside it!
   private mutating func guaranteeUniqueBufferReference() {
     if self.buffer.isUniqueReference() {
       return
@@ -316,11 +304,32 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
     // Well... shit
     let new = Self.createBuffer(
-      minimumCapacity: self.capacity, // We are going to mutate it, capacity > count
+      minimumCapacity: self.capacity,
       header: self.buffer.header
     )
 
     Self.memcpy(dst: new, src: self.buffer, count: self.count)
+  }
+
+  private mutating func guaranteeUniqueBufferReference(
+    withMinimumCapacity minimumCapacity: Int
+  ) {
+    if self.buffer.isUniqueReference() && self.capacity >= minimumCapacity {
+      return
+    }
+
+    // Well... shit, we have to allocate new buffer,
+    // but we can grow at the same time (2 birds - 1 stone).
+    let growFactor = 2
+    let capacity = Swift.max(minimumCapacity, growFactor * self.capacity, 1)
+
+    let new = Self.createBuffer(
+      minimumCapacity: capacity,
+      header: self.buffer.header
+    )
+
+    Self.memcpy(dst: new, src: self.buffer, count: self.count)
+    self.buffer = new
   }
 
   private static func memcpy(dst: Buffer, src: Buffer, count: Int) {
