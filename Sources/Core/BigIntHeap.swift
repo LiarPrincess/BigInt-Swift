@@ -13,7 +13,7 @@ internal struct BigIntNew {
   }
 }
 
-internal struct BigIntHeap: Equatable, ExpressibleByIntegerLiteral {
+internal struct BigIntHeap: Equatable {
 
   internal typealias Word = BigIntStorage.Word
 
@@ -69,10 +69,6 @@ internal struct BigIntHeap: Equatable, ExpressibleByIntegerLiteral {
     self.checkInvariants()
   }
 
-  internal init(integerLiteral value: Int) {
-    self.init(value)
-  }
-
   // MARK: - Unary
 
   internal mutating func negate() {
@@ -103,6 +99,10 @@ internal struct BigIntHeap: Equatable, ExpressibleByIntegerLiteral {
   }
 
   // MARK: - Invariants
+
+  internal mutating func fixInvariants() {
+    self.storage.fixInvariants()
+  }
 
   internal func checkInvariants() {
     self.storage.checkInvariants()

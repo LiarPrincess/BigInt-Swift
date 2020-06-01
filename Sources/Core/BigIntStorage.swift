@@ -188,6 +188,27 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     self.count += 1
   }
 
+  internal mutating func append<C: Collection>(
+    contentsOf other: C
+  ) where C.Element == Word {
+    if other.isEmpty {
+      return
+    }
+
+    let newCount = self.count + other.count
+    self.guaranteeUniqueBufferReference(withMinimumCapacity: newCount)
+
+    self.buffer.withUnsafeMutablePointerToElements { startPtr in
+      var ptr = startPtr.advanced(by: self.count)
+      for word in other {
+        ptr.pointee = word
+        ptr = ptr.successor()
+      }
+    }
+
+    self.count = newCount
+  }
+
   // MARK: - Set
 
   /// Set `self` to represent given `UInt`.
@@ -236,6 +257,12 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
         ptr = ptr.successor()
       }
     }
+  }
+
+  // MARK: - Reserve capacity
+
+  internal mutating func reserveCapacity(_ capacity: Int) {
+    self.guaranteeUniqueBufferReference(withMinimumCapacity: capacity)
   }
 
   // MARK: - String
