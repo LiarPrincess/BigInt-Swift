@@ -4,18 +4,18 @@ internal struct BigIntNew {
 
   internal enum Storage {
     case smi(Smi)
-    case heap(BigIntHeapNew)
+    case heap(BigIntHeap)
   }
 
   internal private(set) var value: Storage
 
   /// This will downgrade to `Smi` if possible
-  internal init(_ value: BigIntHeapNew) {
+  internal init(_ value: BigIntHeap) {
     self.value = .heap(value)
   }
 }
 
-internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
+internal struct BigIntHeap: Equatable, ExpressibleByIntegerLiteral {
 
   internal typealias Word = BigIntStorage.Word
 
@@ -63,7 +63,8 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
     assert(self.isNegative)
 
-    // At this point our 'storage' holds positive number, so we have 2 complement it.
+    // At this point our 'storage' holds positive number,
+    // so we have force 2 complement.
     var copy = self.storage
     copy.transformEveryWord(fn: ~) // Invert every word
     Self.addMagnitude(lhs: &copy, rhs: 1)
@@ -106,8 +107,9 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
 
     var abs = self
     abs.negate()
+    abs.checkInvariants()
     assert(abs.isPositive)
-    return abs.magnitude
+    return BigIntNew(abs)
   }
 
   // MARK: - Init
@@ -122,18 +124,15 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
   }
 
   internal init<T: BinaryInteger>(_ value: T) {
-    self.init(minimumStorageCapacity: 1)
+    // Assuming that biggest 'BinaryInteger' in Swift is representable by 'Word'.
+    let magnitude = Word(value.magnitude)
+    self.storage = BigIntStorage(value: magnitude)
 
-    if !value.isZero {
-      let word = Word(value.magnitude)
-      self.storage.append(word)
-
-      if value.isNegative {
-        self.storage.isNegative.toggle()
-      }
+    if value.isNegative {
+      self.storage.isNegative = true
     }
 
-    self.storage.checkInvariants()
+    self.checkInvariants()
   }
 
   internal init(integerLiteral value: Int) {
@@ -172,7 +171,7 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
       self.storage.isNegative = true
     }
 
-    self.storage.checkInvariants()
+    self.checkInvariants()
   }
 
   internal init?<T: BinaryFloatingPoint>(exactly source: T) {
@@ -197,22 +196,18 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
     }
 
     self.storage.isNegative.toggle()
-    self.storage.checkInvariants()
+    self.checkInvariants()
   }
 
   internal mutating func invert() {
     self.add(other: 1)
     self.negate()
-    self.storage.checkInvariants()
+    self.checkInvariants()
   }
-
-  // MARK: - Add
-
-  private mutating func add(other: Smi.Storage) { }
 
   // MARK: - Equatable
 
-  internal static func == (heap: BigIntHeapNew, smi: Smi) -> Bool {
+  internal static func == (heap: BigIntHeap, smi: Smi) -> Bool {
     // Different signs are never equal
     guard heap.isNegative == smi.isNegative else {
       return false
@@ -229,13 +224,13 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
     }
   }
 
-  internal static func == (lhs: BigIntHeapNew, rhs: BigIntHeapNew) -> Bool {
+  internal static func == (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
     return lhs.storage == rhs.storage
   }
 
   // MARK: - Comparable
 
-  internal static func >= (heap: BigIntHeapNew, smi: Smi) -> Bool {
+  internal static func >= (heap: BigIntHeap, smi: Smi) -> Bool {
     // Negative values are always smaller than positive ones (because math...)
     guard heap.isNegative == smi.isNegative else {
       return smi.isNegative
@@ -252,7 +247,7 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
     }
   }
 
-  internal static func < (heap: BigIntHeapNew, smi: Smi) -> Bool {
+  internal static func < (heap: BigIntHeap, smi: Smi) -> Bool {
     // Negative values are always smaller than positive ones (because math...)
     guard heap.isNegative == smi.isNegative else {
       return heap.isNegative
@@ -269,7 +264,7 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
     }
   }
 
-  internal static func < (lhs: BigIntHeapNew, rhs: BigIntHeapNew) -> Bool {
+  internal static func < (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
     // Negative values are always smaller than positive ones (because math...)
     guard lhs.isNegative == rhs.isNegative else {
       return lhs.isNegative
@@ -330,5 +325,20 @@ internal struct BigIntHeapNew: Equatable, ExpressibleByIntegerLiteral {
     }
 
     return .equal
+  }
+  // MARK: - Presets
+
+  private mutating func setToZero() {
+    self.storage.set(to: 0)
+  }
+
+  private mutating func setToOne() {
+    self.storage.set(to: 1)
+  }
+
+  // MARK: - Invariants
+
+  private func checkInvariants() {
+    self.storage.checkInvariants()
   }
 }
