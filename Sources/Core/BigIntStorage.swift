@@ -53,6 +53,9 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
         return
       }
 
+      // We will allow seting 'isNegative' when the value is '0',
+      // just assume that user know what they are doing.
+
       self.guaranteeUniqueBufferReference()
       let sign = newValue ? -1 : 1
       self.buffer.header.countAndSign = sign * self.count
@@ -95,6 +98,16 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   internal init(minimumCapacity: Int) {
     self.buffer = Self.createBuffer(minimumCapacity: minimumCapacity)
+  }
+
+  internal init(value: UInt) {
+    self.init(minimumCapacity: 1)
+    self.set(to: value)
+  }
+
+  internal init(value: Int) {
+    self.init(minimumCapacity: 1)
+    self.set(to: value)
   }
 
   // MARK: - Create buffer
@@ -179,12 +192,10 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Set `self` to represent given `UInt`.
   internal mutating func set(to value: UInt) {
-    self.guaranteeUniqueBufferReference()
-
     if value.isZero {
-      self.count = 0
-      self.isNegative = false
+      self.setToZero()
     } else {
+      self.guaranteeUniqueBufferReference()
       self.count = 0
       self.append(value)
       self.isNegative = false
@@ -193,16 +204,20 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Set `self` to represent given `Int`.
   internal mutating func set(to value: Int) {
-    self.guaranteeUniqueBufferReference()
-
     if value.isZero {
-      self.count = 0
-      self.isNegative = false
+      self.setToZero()
     } else {
+      self.guaranteeUniqueBufferReference()
       self.count = 0
       self.append(value.magnitude)
       self.isNegative = value.isNegative
     }
+  }
+
+  private mutating func setToZero() {
+    self.guaranteeUniqueBufferReference()
+    self.count = 0
+    self.isNegative = false
   }
 
   // MARK: - Transform
@@ -294,9 +309,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   // MARK: - Unique
 
-  /// DO NOT merge this method with
-  /// `guaranteeUniqueBufferReference(withMinimumCapacity)`!
-  /// That methods has growing logic inside it!
   private mutating func guaranteeUniqueBufferReference() {
     if self.buffer.isUniqueReference() {
       return
@@ -309,6 +321,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     )
 
     Self.memcpy(dst: new, src: self.buffer, count: self.count)
+    self.buffer = new
   }
 
   private mutating func guaranteeUniqueBufferReference(
