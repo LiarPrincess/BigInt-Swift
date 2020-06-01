@@ -6,7 +6,7 @@ import BigIntProxy
 ///
 /// Btw. It has `reference` semantics, so be carefull!
 /// Use `copy()` if needed.
-internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConvertible {
+internal final class BigIntHeapOld: CustomStringConvertible, CustomDebugStringConvertible {
 
   internal typealias Words = BigIntProxy.Words
 
@@ -34,7 +34,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
 
   internal var magnitude: BigInt {
     let result = self.value.magnitude
-    let resultHeap = BigIntHeap(value: result)
+    let resultHeap = BigIntHeapOld(value: result)
     return BigInt(resultHeap)
   }
 
@@ -83,7 +83,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value += big
   }
 
-  internal func add(other: BigIntHeap) {
+  internal func add(other: BigIntHeapOld) {
     self.value += other.value
   }
 
@@ -94,7 +94,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value -= big
   }
 
-  internal func sub(other: BigIntHeap) {
+  internal func sub(other: BigIntHeapOld) {
     self.value -= other.value
   }
 
@@ -105,7 +105,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value *= big
   }
 
-  internal func mul(other: BigIntHeap) {
+  internal func mul(other: BigIntHeapOld) {
     self.value *= other.value
   }
 
@@ -116,7 +116,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value /= big
   }
 
-  internal func div(other: BigIntHeap) {
+  internal func div(other: BigIntHeapOld) {
     self.value /= other.value
   }
 
@@ -127,18 +127,18 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value %= big
   }
 
-  internal func mod(other: BigIntHeap) {
+  internal func mod(other: BigIntHeapOld) {
     self.value %= other.value
   }
 
   // MARK: - Div mod
 
-  internal typealias DivMod = (quotient: BigIntHeap, remainder: BigIntHeap)
+  internal typealias DivMod = (quotient: BigIntHeapOld, remainder: BigIntHeapOld)
 
-  internal static func divMod(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
+  internal static func divMod(lhs: BigIntHeapOld, rhs: BigIntHeapOld) -> DivMod {
     let result = lhs.value.quotientAndRemainder(dividingBy: rhs.value)
-    let quotient = BigIntHeap(value: result.quotient)
-    let remainder = BigIntHeap(value: result.remainder)
+    let quotient = BigIntHeapOld(value: result.quotient)
+    let remainder = BigIntHeapOld(value: result.remainder)
     return (quotient: quotient, remainder: remainder)
   }
 
@@ -149,7 +149,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value &= big
   }
 
-  internal func and(other: BigIntHeap) {
+  internal func and(other: BigIntHeapOld) {
     self.value &= other.value
   }
 
@@ -160,7 +160,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value |= big
   }
 
-  internal func or(other: BigIntHeap) {
+  internal func or(other: BigIntHeapOld) {
     self.value |= other.value
   }
 
@@ -171,7 +171,7 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
     self.value ^= big
   }
 
-  internal func xor(other: BigIntHeap) {
+  internal func xor(other: BigIntHeapOld) {
     self.value ^= other.value
   }
 
@@ -204,25 +204,25 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
 
   // MARK: - Equatable
 
-  internal static func == (lhs: BigIntHeap, rhs: Smi) -> Bool {
+  internal static func == (lhs: BigIntHeapOld, rhs: Smi) -> Bool {
     return lhs.value == rhs.value
   }
 
-  internal static func == (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
+  internal static func == (lhs: BigIntHeapOld, rhs: BigIntHeapOld) -> Bool {
     return lhs.value == rhs.value
   }
 
   // MARK: - Comparable
 
-  internal static func < (lhs: BigIntHeap, rhs: Smi) -> Bool {
+  internal static func < (lhs: BigIntHeapOld, rhs: Smi) -> Bool {
     return lhs.value < rhs.value
   }
 
-  internal static func < (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
+  internal static func < (lhs: BigIntHeapOld, rhs: BigIntHeapOld) -> Bool {
     return lhs.value < rhs.value
   }
 
-  internal static func >= (lhs: BigIntHeap, rhs: Smi) -> Bool {
+  internal static func >= (lhs: BigIntHeapOld, rhs: Smi) -> Bool {
     return lhs.value >= rhs.value
   }
 
@@ -238,8 +238,8 @@ internal final class BigIntHeap: CustomStringConvertible, CustomDebugStringConve
 
   // MARK: - Copy
 
-  internal func copy() -> BigIntHeap {
-    return BigIntHeap(value: self.value)
+  internal func copy() -> BigIntHeapOld {
+    return BigIntHeapOld(value: self.value)
   }
 
   // MARK: - Type conversion

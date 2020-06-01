@@ -109,7 +109,7 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
     let x = self.isNegative ? ((~result) &+ 1) : result
     let unsigned = Storage.Magnitude(bitPattern: x)
 
-    let heap = BigIntHeap(unsigned)
+    let heap = BigIntHeapOld(unsigned)
     if self.isNegative {
       heap.negate()
     }
@@ -163,7 +163,7 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
     // Heap
     let result = Int(high) << Storage.bitWidth | Int(low)
-    let heap = BigIntHeap(result)
+    let heap = BigIntHeapOld(result)
     return BigInt(heap)
   }
 
@@ -184,7 +184,7 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))
     let maxPlus1 = Storage.max.magnitude + 1
-    let heap = BigIntHeap(maxPlus1)
+    let heap = BigIntHeapOld(maxPlus1)
     return BigInt(heap)
   }
 
@@ -310,7 +310,7 @@ internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
 
   // MARK: - As heap
 
-  private func asHeap() -> BigIntHeap {
-    return BigIntHeap(self.value)
+  private func asHeap() -> BigIntHeapOld {
+    return BigIntHeapOld(self.value)
   }
 }

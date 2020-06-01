@@ -10,7 +10,7 @@ public struct BigInt:
 
   internal enum Storage {
     case smi(Smi)
-    case heap(BigIntHeap)
+    case heap(BigIntHeapOld)
   }
 
   public struct Words: RandomAccessCollection {
@@ -18,7 +18,7 @@ public struct BigInt:
     // swiftlint:disable:next nesting
     private enum Inner {
       case smi(Smi.Words)
-      case heap(BigIntHeap.Words)
+      case heap(BigIntHeapOld.Words)
     }
 
     private let inner: Inner
@@ -132,7 +132,7 @@ public struct BigInt:
     if let smi = Smi(value) {
       self.value = .smi(smi)
     } else {
-      let heap = BigIntHeap(value)
+      let heap = BigIntHeapOld(value)
       self.value = .heap(heap)
     }
   }
@@ -154,13 +154,13 @@ public struct BigInt:
   }
 
   public init<T: BinaryFloatingPoint>(_ source: T) {
-    let heap = BigIntHeap(source)
+    let heap = BigIntHeapOld(source)
     self.value = .heap(heap)
     self.downgradeToSmiIfPossible()
   }
 
   public init?<T: BinaryFloatingPoint>(exactly source: T) {
-    guard let heap = BigIntHeap(exactly: source) else {
+    guard let heap = BigIntHeapOld(exactly: source) else {
       return nil
     }
 
@@ -173,7 +173,7 @@ public struct BigInt:
   }
 
   /// This will downgrade to `Smi` if possible
-  internal init(_ value: BigIntHeap) {
+  internal init(_ value: BigIntHeapOld) {
     self.value = .heap(value)
     self.downgradeToSmiIfPossible()
   }
@@ -364,7 +364,7 @@ public struct BigInt:
       return lhs.div(other: rhs)
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.div(other: rhs)
       return BigInt(lhsHeap)
 
@@ -387,7 +387,7 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.div(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
@@ -410,7 +410,7 @@ public struct BigInt:
       return lhs.mod(other: rhs)
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.mod(other: rhs)
       return BigInt(lhsHeap)
 
@@ -433,7 +433,7 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.mod(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
@@ -463,12 +463,12 @@ public struct BigInt:
 
     case let (.smi(lhs), .heap(rhs)):
       // We need to promote 'lhs' to heap
-      let lhsHeap = BigIntHeap(lhs.value)
+      let lhsHeap = BigIntHeapOld(lhs.value)
       return self.divMod(lhs: lhsHeap, rhs: rhs)
 
     case let (.heap(lhs), .smi(rhs)):
       // We need to promote 'rhs' to heap
-      let rhsHeap = BigIntHeap(rhs.value)
+      let rhsHeap = BigIntHeapOld(rhs.value)
       return self.divMod(lhs: lhs, rhs: rhsHeap)
 
     case let (.heap(lhs), .heap(rhs)):
@@ -476,8 +476,8 @@ public struct BigInt:
     }
   }
 
-  private func divMod(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
-    let result = BigIntHeap.divMod(lhs: lhs, rhs: rhs)
+  private func divMod(lhs: BigIntHeapOld, rhs: BigIntHeapOld) -> DivMod {
+    let result = BigIntHeapOld.divMod(lhs: lhs, rhs: rhs)
     let quotient = BigInt(result.quotient)
     let remainder = BigInt(result.remainder)
     return (quotient: quotient, remainder: remainder)
@@ -510,7 +510,7 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.and(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
@@ -552,7 +552,7 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.or(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
@@ -594,7 +594,7 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeap(lhsSmi.value)
+      let lhsHeap = BigIntHeapOld(lhsSmi.value)
       lhsHeap.xor(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
