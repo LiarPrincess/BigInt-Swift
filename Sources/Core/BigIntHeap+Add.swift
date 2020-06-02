@@ -3,12 +3,11 @@ extension BigIntHeap {
   // MARK: - Smi
 
   internal mutating func add(other: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     if other.isZero {
       return
     }
-
-    // We are in for non-trivial case:
-    defer { self.checkInvariants() }
 
     // Just using '-' may overflow!
     let word = Word(other.magnitude)
@@ -40,40 +39,33 @@ extension BigIntHeap {
   }
 
   internal static func addMagnitude(lhs: inout BigIntStorage, rhs: Word) {
-    if rhs.isZero {
+    // This check has to be here otherwise final 'lhs.append(carry)'
+    // would append '0' which is illegal ('0' should have empty storage).
+    if rhs == 0 {
       return
     }
 
-    if lhs.isEmpty {
-      lhs.append(rhs)
-      return
-    }
-
-    var carry: Word
-    (carry, lhs[0]) = lhs[0].addingFullWidth(rhs)
-
-    for i in 1..<lhs.count {
-      guard carry > 0 else {
-        break
-      }
-
+    var carry = rhs
+    for i in 0..<lhs.count {
       (carry, lhs[i]) = lhs[i].addingFullWidth(carry)
+
+      if carry == 0 {
+        return
+      }
     }
 
-    if carry > 0 {
-      lhs.append(1)
-    }
+    // We arrived at the end of the buffer, but we still have carry
+    lhs.append(carry)
   }
 
   // MARK: - Heap
 
   internal mutating func add(other: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     if other.isZero {
       return
     }
-
-    // We are in for non-trivial case:
-    defer { self.checkInvariants() }
 
     if self.isZero {
       self.storage = other.storage
@@ -107,15 +99,6 @@ extension BigIntHeap {
   /// Only at the magnitude.
   internal static func addMagnitudes(lhs: inout BigIntStorage,
                                      rhs: BigIntStorage) {
-    if rhs.isZero {
-      return
-    }
-
-    if lhs.isZero {
-      lhs = rhs
-      return
-    }
-
     let commonCount = Swift.min(lhs.count, rhs.count)
     let maxCount = Swift.max(lhs.count, rhs.count)
     lhs.reserveCapacity(maxCount)

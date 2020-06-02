@@ -88,16 +88,6 @@ internal struct BigIntHeap: Equatable {
     self.checkInvariants()
   }
 
-  // MARK: - Presets
-
-  internal mutating func setToZero() {
-    self.storage.set(to: 0)
-  }
-
-  internal mutating func setToOne() {
-    self.storage.set(to: 1)
-  }
-
   // MARK: - Invariants
 
   internal mutating func fixInvariants() {
