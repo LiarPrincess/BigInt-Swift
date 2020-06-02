@@ -46,6 +46,10 @@ internal struct BigIntHeap: Equatable {
     return BigIntNew(abs)
   }
 
+  internal var hasMagnitudeOfOne: Bool {
+    return self.storage.count == 1 && self.storage[0] == 1
+  }
+
   // MARK: - Init
 
   /// Init with storage set to `0`.

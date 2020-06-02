@@ -100,6 +100,11 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     self.buffer = Self.createBuffer(minimumCapacity: minimumCapacity)
   }
 
+  internal init(repeating repeatedValue: Word, count: Int) {
+    self.init(minimumCapacity: count)
+    Self.memset(dst: self.buffer, value: repeatedValue, count: count)
+  }
+
   internal init(value: UInt) {
     self.init(minimumCapacity: 1)
     self.set(to: value)
@@ -213,10 +218,12 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Set `self` to represent given `UInt`.
   internal mutating func set(to value: UInt) {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do this anyway.
+
     if value.isZero {
       self.setToZero()
     } else {
-      self.guaranteeUniqueBufferReference()
       self.count = 0
       self.append(value)
       self.isNegative = false
@@ -225,18 +232,21 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Set `self` to represent given `Int`.
   internal mutating func set(to value: Int) {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do this anyway.
+
     if value.isZero {
       self.setToZero()
     } else {
-      self.guaranteeUniqueBufferReference()
       self.count = 0
       self.append(value.magnitude)
       self.isNegative = value.isNegative
     }
   }
 
-  private mutating func setToZero() {
-    self.guaranteeUniqueBufferReference()
+  internal mutating func setToZero() {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do this anyway.
     self.count = 0
     self.isNegative = false
   }
@@ -377,6 +387,12 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       dst.withUnsafeMutablePointerToElements { dstPtr in
         dstPtr.assign(from: srcPtr, count: count)
       }
+    }
+  }
+
+  private static func memset(dst: Buffer, value: Word, count: Int) {
+    dst.withUnsafeMutablePointerToElements { dstPtr in
+      dstPtr.assign(repeating: value, count: count)
     }
   }
 }
