@@ -105,11 +105,7 @@ extension BigIntHeap {
     }
 
     // Compare from most significant word
-    let indices = stride(from: lhs.count, through: 0, by: -1)
-    for index in indices {
-      let lhsWord = lhs[index]
-      let rhsWord = rhs[index]
-
+    for (lhsWord, rhsWord) in zip(lhs, rhs).reversed() {
       if lhsWord < rhsWord {
         return .less
       }

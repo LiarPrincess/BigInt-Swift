@@ -193,6 +193,27 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     self.count += 1
   }
 
+  /// Add given `Word` to the buffer specified number of times.
+  internal mutating func append(_ element: Word, repeated count: Int) {
+    // swiftlint:disable:next empty_count
+    assert(count >= 0)
+
+    if count.isZero {
+      return
+    }
+
+    let minimumCapacity = self.count + count
+    self.guaranteeUniqueBufferReference(withMinimumCapacity: minimumCapacity)
+
+    self.buffer.withUnsafeMutablePointerToElements { startPtr in
+      let ptr = startPtr.advanced(by: self.count)
+      ptr.assign(repeating: element, count: count)
+    }
+
+    self.count += count
+  }
+
+  /// Add all of the `Word`s from given collection to the buffer.
   internal mutating func append<C: Collection>(
     contentsOf other: C
   ) where C.Element == Word {

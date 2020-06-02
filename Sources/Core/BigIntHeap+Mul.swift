@@ -39,7 +39,7 @@ extension BigIntHeap {
     let otherLSB = other.trailingZeroBitCount
     let isOtherPowerOf2 = other >> otherLSB == 1
     if isOtherPowerOf2 {
-      self.shiftLeft(count: otherLSB)
+      self.shiftLeft(count: otherLSB.magnitude)
       return
     }
 
