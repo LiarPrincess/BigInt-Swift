@@ -267,19 +267,53 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     self.buffer = new
   }
 
+  // MARK: - Drop first
+
+  /// Remove first `k` elements.
+  internal mutating func dropFirst(_ k: Int) {
+    // swiftlint:disable:next empty_count
+    assert(count >= 0)
+
+    if count.isZero {
+      return
+    }
+
+    if k >= self.count {
+      self.setToZero()
+      return
+    }
+
+    self.guaranteeUniqueBufferReference()
+
+    let copyCount = self.count - k
+    assert(copyCount > 0) // We checked 'k >= self.count'
+
+    self.buffer.withUnsafeMutablePointerToElements { startPtr in
+      // Copy 'copyCount' elements to front
+      let copySrcPtr = startPtr.advanced(by: k)
+      startPtr.assign(from: copySrcPtr, count: copyCount)
+
+      // Clean elements after 'copyCount'
+      let afterCopiedElementsPtr = startPtr.advanced(by: copyCount)
+      afterCopiedElementsPtr.assign(repeating: 0, count: k)
+    }
+
+    self.count = copyCount
+  }
+
   // MARK: - Set
+
+  // TODO: Can we always assume that memory after 'count' is cleared?
 
   /// Set `self` to represent given `UInt`.
   internal mutating func set(to value: UInt) {
     // We do not have to call 'self.guaranteeUniqueBufferReference'
     // because all of the functions we are using will do this anyway.
 
-    if value.isZero {
-      self.setToZero()
-    } else {
-      self.count = 0
+    self.setToZero()
+
+    if value != 0 {
       self.append(value)
-      self.isNegative = false
     }
   }
 
@@ -288,20 +322,30 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     // We do not have to call 'self.guaranteeUniqueBufferReference'
     // because all of the functions we are using will do this anyway.
 
-    if value.isZero {
-      self.setToZero()
-    } else {
-      self.count = 0
+    self.setToZero()
+
+    if value != 0 {
       self.append(value.magnitude)
       self.isNegative = value.isNegative
     }
   }
 
   internal mutating func setToZero() {
-    // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do this anyway.
+    self.guaranteeUniqueBufferReference()
+
+    let oldCount = self.count
+
     self.count = 0
     self.isNegative = false
+
+    // We need to clear the whole buffer,
+    // some code may depend on having '0' after 'self.count'.
+    if oldCount > 0 {
+      self.buffer.withUnsafeMutablePointerToElements { startPtr in
+        startPtr.assign(repeating: 0, count: oldCount)
+        return
+      }
+    }
   }
 
   // MARK: - Transform
