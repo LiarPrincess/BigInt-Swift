@@ -1,5 +1,20 @@
 extension BigIntHeap {
 
+  // MARK: - Hashable
+
+  internal func hash(into hasher: inout Hasher) {
+    if let smi = self.asSmiIfPossible() {
+      smi.hash(into: &hasher)
+    } else {
+      hasher.combine(self.isNegative)
+      hasher.combine(self.storage.count)
+
+      for word in self.storage {
+        hasher.combine(word)
+      }
+    }
+  }
+
   // MARK: - Equatable
 
   internal static func == (heap: BigIntHeap, smi: Smi) -> Bool {

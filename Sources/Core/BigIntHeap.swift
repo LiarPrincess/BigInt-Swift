@@ -101,4 +101,26 @@ internal struct BigIntHeap: Equatable {
   internal func checkInvariants() {
     self.storage.checkInvariants()
   }
+
+  // MARK: - Type conversion
+
+  internal func asSmiIfPossible() -> Smi? {
+    guard self.storage.count == 1 else {
+      return nil
+    }
+
+    let word = self.storage[0]
+    if self.isPositive {
+      return Smi(word)
+    }
+
+    let max = Word(Smi.Storage.min.magnitude)
+    if word > max {
+      return nil
+    }
+
+    // We are in a 'Smi.Storage' range, which also means that we are in 'Int' range
+    let signed = -Int(word)
+    return Smi(signed)
+  }
 }
