@@ -193,26 +193,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     self.count += 1
   }
 
-  /// Add given `Word` to the buffer specified number of times.
-  internal mutating func append(_ element: Word, repeated count: Int) {
-    // swiftlint:disable:next empty_count
-    assert(count >= 0)
-
-    if count.isZero {
-      return
-    }
-
-    let minimumCapacity = self.count + count
-    self.guaranteeUniqueBufferReference(withMinimumCapacity: minimumCapacity)
-
-    self.buffer.withUnsafeMutablePointerToElements { startPtr in
-      let ptr = startPtr.advanced(by: self.count)
-      ptr.assign(repeating: element, count: count)
-    }
-
-    self.count += count
-  }
-
   /// Add all of the `Word`s from given collection to the buffer.
   internal mutating func append<C: Collection>(
     contentsOf other: C
@@ -233,6 +213,58 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
 
     self.count = newCount
+  }
+
+  // MARK: - Prepend
+
+  /// Add given `Word`  at the start of the buffer specified number of times.
+  internal mutating func prepend(_ element: Word, repeated count: Int) {
+    // swiftlint:disable:next empty_count
+    assert(count >= 0)
+
+    if count.isZero {
+      return
+    }
+
+    let newCount = self.count + count
+    if self.buffer.isUniqueReference() && self.capacity >= newCount {
+      // Our current buffer is big enough to do the whole operation,
+      // no new allocation is needed.
+
+      self.buffer.withUnsafeMutablePointerToElements { startPtr in
+        // Move current words back
+        let targetPtr = startPtr.advanced(by: count)
+        targetPtr.assign(from: startPtr, count: self.count)
+
+        // Reset old words
+        startPtr.assign(repeating: element, count: count)
+      }
+
+      self.count = newCount
+      return
+    }
+
+    let new = Self.createBuffer(
+      minimumCapacity: newCount,
+      header: Header(isNegative: self.isNegative, count: newCount)
+    )
+
+    self.buffer.withUnsafeMutablePointerToElements { selfStartPtr in
+      new.withUnsafeMutablePointerToElements { newStartPtr in
+        // Populate new (shifted) words
+        let targetPtr = newStartPtr.advanced(by: count)
+        targetPtr.assign(from: selfStartPtr, count: self.count)
+
+        // Set the prefix to the requested word.
+        // We don't have to do this if 'element' is '0', because the buffer
+        // is already zeroed.
+        if !element.isZero {
+          newStartPtr.assign(repeating: element, count: count)
+        }
+      }
+    }
+
+    self.buffer = new
   }
 
   // MARK: - Set

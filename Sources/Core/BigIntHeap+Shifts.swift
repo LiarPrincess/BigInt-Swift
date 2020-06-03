@@ -19,66 +19,51 @@ extension BigIntHeap {
       return
     }
 
-    // Create space so we can shift
-    self.prependZerosForShiftLeft(shiftCount: count)
-
-    // We will always start shifting from the end to avoid overwriting lower words,
-    // this is why we will use 'reversed'.
     let wordShift = Int(count / Word(Word.bitWidth))
     let bitShift = Int(count % Word(Word.bitWidth))
 
+    self.storage.prepend(0, repeated: wordShift)
+
     if bitShift == 0 {
-      // Fast path: we can just shift by whole words
-      for i in (0..<self.storage.count).reversed() {
-        let targetIndex = wordShift + i
-        self.storage[targetIndex] = self.storage[i]
-        self.storage[i] = 0
-      }
-    } else {
-      // Slow path: we have to deal with word shift and bit (subword) shift.
-      //
-      // Example for '1011 << 5' (assuming that our Word has 4 bits):
-      // [1011] << 5 = [0001][0110][0000]
-      // But because we store 'low' words before 'high' words in our storage,
-      // this will be saved as [0000][0110][0001].
+      return
+    }
 
-      let lowShift = bitShift // In example: 5 % 4 = 1
-      let highShift = Word.bitWidth - lowShift // In example: 4 - 1 = 3
+    // Ok, now we have to deal with bit (subword) shifting.
+    // We will always start from the end to avoid overwriting lower words,
+    // this is why we will use 'reversed'.
+    //
+    // Example for '1011 << 5' (assuming that our Word has 4 bits):
+    // - Expected result:
+    //   [1011] << 5 = [0001][0110][0000]
+    //   But because we store 'low' words before 'high' words in our storage,
+    //   this will be stored as [0000][0110][0001].
+    // - Current situation:
+    //   [1011] << 4 (because our Word has 4 bits) = [1011][0000]
+    //   Which is stored as: [0000][1011]
+    // - To be done:
+    //   Shift by this 1 bit, because 4 (our Word size) + 1 = 5 (requested shift)
 
-      for i in (0..<self.storage.count).reversed() {
-        let word = self.storage[i]       // In example: [1011]
-        let lowPart = word << lowShift   // In example: [1011] << 1 = [0110]
-        let highPart = word >> highShift // In example: [1011] >> 3 = [0001]
+    // Append word that will be used for shifts from our most significant word.
+    self.storage.append(0) // In example: [0000][1011][0000]
 
-        let lowIndex = wordShift + i // In example: 1 + 0 = 1, [0000][this][0001]
-        let highIndex = lowIndex + 1 // In example: 1 + 1 = 2, [0000][0110][this]
+    let lowShift = bitShift // In example: 5 % 4 = 1
+    let highShift = Word.bitWidth - lowShift // In example: 4 - 1 = 3
 
-        self.storage[highIndex] = self.storage[highIndex] | lowPart
-        self.storage[lowIndex] = self.storage[lowIndex] | highPart
-        self.storage[i] = 0
-      }
+    for i in (0..<self.storage.count).reversed() {
+      let indexAfterWordShift = i + wordShift
+
+      let word = self.storage[indexAfterWordShift] // In example: [1011]
+      let lowPart = word << lowShift               // In example: [1011] << 1 = [0110]
+      let highPart = word >> highShift             // In example: [1011] >> 3 = [0001]
+
+      let lowIndex = indexAfterWordShift // In example: 1 + 0 = 1, [0000][this][0000]
+      let highIndex = lowIndex + 1       // In example: 1 + 1 = 2, [0000][1011][this]
+
+      self.storage[lowIndex] = lowPart
+      self.storage[highIndex] = self.storage[highIndex] | highPart
     }
 
     self.fixInvariants()
-  }
-
-  private mutating func prependZerosForShiftLeft(shiftCount: Word) {
-    // How many bits/words do we need?
-    // Bit arithmetic is done in 'Words' (because that's the type of 'count' arg),
-    // but then when calculating 'Word' count we will switch to 'Int'.
-    let currentBitCount = Word(self.bitWidth)
-    let neededBitCount = currentBitCount + shiftCount
-    var neededWordCount = Int(neededBitCount / Word(Word.bitWidth))
-
-    // We need to round UP to the nearest 'Word'
-    let hasPartialyFilledWord = neededBitCount % Word(Word.bitWidth) != 0
-    if hasPartialyFilledWord {
-      neededWordCount += 1
-    }
-
-    // Fill additional words with '0'
-    let additionalWordCount = neededWordCount - self.storage.count
-    self.storage.append(0, repeated: additionalWordCount)
   }
 
   internal mutating func shiftLeft(count: BigIntHeap) {
@@ -86,8 +71,11 @@ extension BigIntHeap {
 
     if count.isPositive {
       guard let word = self.guaranteeSingleWord(shiftCount: count) else {
+        // Something is off.
+        // We will execute order 66 and kill the jedi before they take control
+        // over the whole galaxy (also known as ENOMEM).
         let msg = "Shifting by more than \(Word.max) is not possible "
-                + "(and it is probably not what you wany anyway, "
+                + "(and it is probably not what you want anyway, "
                 + "do you really have that much memory?)."
         trap(msg)
       }
