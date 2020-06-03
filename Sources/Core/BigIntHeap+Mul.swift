@@ -141,34 +141,36 @@ extension BigIntHeap {
   ///   4064247 <- this is acc
   /// ```.
   internal static func mulMagnitude(lhs: inout BigIntStorage, rhs: BigIntStorage) {
-    // Unfortunately we have to allocate for 'result',
-    // because we need access to both 'lhs' and 'rhs' for the whole 'mul' duration.
     let resultCount = lhs.count + rhs.count
     var result = BigIntStorage(repeating: 0, count: resultCount)
 
-    for lhsIndex in 0..<lhs.count {
+    // We will use 'smaller' for inner loop in hope that it will generate
+    // smaller pressure on registers.
+    let (smaller, bigger) = lhs.count <= rhs.count ? (lhs, rhs) : (rhs, lhs)
+
+    for biggerIndex in 0..<bigger.count {
       var carry = Word.zero
-      let lhsWord = lhs[lhsIndex]
+      let biggerWord = bigger[biggerIndex]
 
-      // We may check if 'lhsWord.isZero', but the odds of that happening are low
-      // and this would introduce branching.
+      if biggerWord.isZero {
+        continue
+      }
 
-      for rhsIndex in 0..<rhs.count {
-        let rhsWord = rhs[rhsIndex]
-        let resultIndex = lhsIndex + rhsIndex
+      for smallerIndex in 0..<smaller.count {
+        let smallerWord = smaller[smallerIndex]
+        let resultIndex = biggerIndex + smallerIndex
 
-        let (high, low) = lhsWord.multipliedFullWidth(by: rhsWord)
+        let (high, low) = biggerWord.multipliedFullWidth(by: smallerWord)
         (carry, result[resultIndex]) = result[resultIndex].addingFullWidth(low, carry)
 
         // TODO: Unit test for lack of overflow (99 99 99 * 99 99)
-        // We are finished with 'low' and 'resultIndex'.
         // Let's deal with 'high' in the next iteration.
         carry += high
       }
 
       // Last operation ('mul' or 'add') produced overflow.
       // We can just add it in the right place.
-      result[lhsIndex + rhs.count] = carry
+      result[biggerIndex + smaller.count] += carry
     }
 
     lhs = result
