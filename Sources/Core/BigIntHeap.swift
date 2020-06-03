@@ -34,6 +34,10 @@ internal struct BigIntHeap: Equatable {
     return self.storage.isNegative
   }
 
+  /// DO NOT USE in general code! This will do allocation!
+  ///
+  /// This is not one of those 'easy/fast' methods.
+  /// It is only here for `BigInt.magnitude`.
   internal var magnitude: BigIntNew {
     if self.isPositive {
       return BigIntNew(self)
@@ -73,23 +77,8 @@ internal struct BigIntHeap: Equatable {
     self.checkInvariants()
   }
 
-  // MARK: - Unary
-
-  internal mutating func negate() {
-    // Zero is always positive
-    if self.isZero {
-      assert(self.isPositive)
-      return
-    }
-
-    self.storage.isNegative.toggle()
-    self.checkInvariants()
-  }
-
-  internal mutating func invert() {
-    self.add(other: 1)
-    self.negate()
-    self.checkInvariants()
+  internal init(storage: BigIntStorage) {
+    self.storage = storage
   }
 
   // MARK: - Invariants
