@@ -106,11 +106,81 @@ extension BigIntHeap {
       result[resultCount] = bothNegative
     }
 
+    result.isNegative = bothNegative.isTrue
     result.fixInvariants()
     self.storage = result
   }
 
   // MARK: - Or
+
+  /// void
+  /// mpz_ior (mpz_t r, const mpz_t u, const mpz_t v)
+  ///
+  /// Variable names mostly taken from GMP.
+  internal mutating func or(other: BigIntHeap) {
+    if self.isZero {
+      self.storage = other.storage
+      return
+    }
+
+    if other.isZero {
+      return
+    }
+
+    // 'v' is smaller, 'u' is bigger
+    let v = self.storage.count <= other.storage.count ? self.storage : other.storage
+    let u = self.storage.count <= other.storage.count ? other.storage : self.storage
+    assert(v.count <= u.count)
+
+    var vIsNegative: Word = v.isNegative.asWord
+    var uIsNegative: Word = u.isNegative.asWord
+    var anyNegative: Word = vIsNegative | uIsNegative
+
+    // '-' before unsigned number works this way:
+    // - if it is '0' -> stay '0'
+    // - any other number -> MAX - x + 1, so in our case MAX - 1 + 1 = MAX
+    let vMask: Word = vIsNegative.isTrue ? .max : .zero
+    let uMask: Word = uIsNegative.isTrue ? .max : .zero
+    let anyNegativeMask: Word = anyNegative.isTrue ? .max : .zero
+
+    // If the smaller input is negative, by sign extension higher words don't matter.
+    let resultCount = vMask.isTrue ? v.count : u.count
+    var result = BigIntStorage(repeating: 0, count: resultCount + Int(anyNegative))
+
+    for i in 0..<v.count {
+      let ul = (u[i] ^ uMask) + uIsNegative
+      uIsNegative = (ul < uIsNegative).asWord
+
+      let vl = (v[i] ^ vMask) + vIsNegative
+      vIsNegative = (vl < vIsNegative).asWord
+
+      let rl = ((ul | vl) ^ anyNegativeMask) + anyNegative
+      anyNegative = (rl < anyNegative).asWord
+
+      result[i] = rl
+    }
+
+    assert(vIsNegative == 0)
+
+    for i in v.count..<resultCount {
+      let ul = (u[i] ^ uMask) + uIsNegative
+      uIsNegative = (ul < uIsNegative).asWord
+
+      let rl = ( (ul | vMask) ^ anyNegativeMask) + anyNegative
+      anyNegative = (rl < anyNegative).asWord
+
+      result[i] = rl
+    }
+
+    if anyNegative.isTrue {
+      result[resultCount] = anyNegative
+    }
+
+    result.isNegative = anyNegative.isTrue
+    result.fixInvariants()
+    self.storage = result
+  }
+
   // MARK: - Xor
 
   // MARK: - Two complement
