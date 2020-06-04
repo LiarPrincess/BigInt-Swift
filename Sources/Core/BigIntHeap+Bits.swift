@@ -1,8 +1,14 @@
 // swiftlint:disable function_body_length
 // swiftlint:disable file_length
 
-// Most of the code was taken from: https://gmplib.org
-// GMP function name is in comment obove method name.
+// Most of the code was taken from mini-gmp: https://gmplib.org
+// GMP function name is in comment above method name.
+//
+// The main reason why we use this version (instead of standard 2 complement)
+// is that it avoids unnecesary allocation.
+// For example: 2 complement when both numbers are negative would have to allocate
+// 2 times (1 for each of the numbers) and then anotyer one for result.
+// GMP-mini does only 1 allocation, so that's what we prefer.
 
 // MARK: - Helper extensions
 
