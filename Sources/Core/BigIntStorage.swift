@@ -62,6 +62,11 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
   }
 
+  /// `0` is also positive.
+  internal var isPositive: Bool {
+    return !self.isNegative
+  }
+
   internal private(set) var count: Int {
     get {
       let raw = self.buffer.header.countAndSign

@@ -1,43 +1,22 @@
+// swiftlint:disable function_body_length
+
+// Most of the code was inspired from: https://gmplib.org
+
+// MARK: - Helper extensions
+
+extension Bool {
+  fileprivate var asWord: BigIntStorage.Word {
+    return self ? 1 : 0
+  }
+}
+
+extension BigIntStorage.Word {
+  fileprivate var isTrue: Bool {
+    return self != 0
+  }
+}
+
 extension BigIntHeap {
-
-  // MARK: - Words
-
-  internal var words: BigIntStorage {
-    return self.twoComplement()
-  }
-
-  // MARK: - Bit width
-
-  /// The minimum number of bits required to represent this integer in binary.
-  internal var bitWidth: Int {
-    guard let last = self.storage.last else {
-      assert(self.isZero)
-      return 0
-    }
-
-    let sign = 1
-    return self.storage.count * Word.bitWidth - last.leadingZeroBitCount + sign
-  }
-
-  internal var minRequiredWidth: Int {
-    return self.bitWidth
-  }
-
-  // MARK: - Trailing zero bit count
-
-  /// The number of trailing zero bits in the binary representation of this integer.
-  ///
-  /// - Important:
-  /// `0` is considered to have zero trailing zero bits.
-  internal var trailingZeroBitCount: Int {
-    if let index = self.storage.lastIndex(where: { $0 != 0 }) {
-      let word = self.storage[index]
-      return index * Word.bitWidth + word.trailingZeroBitCount
-    }
-
-    assert(self.isZero)
-    return 0
-  }
 
   // MARK: - Negate
 
@@ -54,6 +33,8 @@ extension BigIntHeap {
 
   // MARK: - Invert
 
+  /// void
+  /// mpz_com (mpz_t r, const mpz_t u)
   internal mutating func invert() {
     self.add(other: 1)
     self.negate()
@@ -61,6 +42,74 @@ extension BigIntHeap {
   }
 
   // MARK: - And
+
+  /// void
+  /// mpz_and (mpz_t r, const mpz_t u, const mpz_t v)
+  ///
+  /// Variable names mostly taken from GMP.
+  internal mutating func and(other: BigIntHeap) {
+    if self.isZero {
+      return
+    }
+
+    if other.isZero {
+      self.storage.setToZero()
+      return
+    }
+
+    // 'v' is smaller, 'u' is bigger
+    let v = self.storage.count <= other.storage.count ? self.storage : other.storage
+    let u = self.storage.count <= other.storage.count ? other.storage : self.storage
+    assert(v.count <= u.count)
+
+    var vIsNegative: Word = v.isNegative.asWord
+    var uIsNegative: Word = u.isNegative.asWord
+    var bothNegative: Word = vIsNegative & uIsNegative
+
+    // '-' before unsigned number works this way:
+    // - if it is '0' -> stay '0'
+    // - any other number -> MAX - x + 1, so in our case MAX - 1 + 1 = MAX
+    let vMask: Word = vIsNegative.isTrue ? .max : .zero
+    let uMask: Word = uIsNegative.isTrue ? .max : .zero
+    let bothNegativeMask: Word = bothNegative.isTrue ? .max : .zero
+
+    // If the smaller input is positive, higher words don't matter.
+    let resultCount = v.isPositive ? v.count : u.count
+    var result = BigIntStorage(repeating: 0, count: resultCount + Int(bothNegative))
+
+    for i in 0..<v.count {
+      let ul = (u[i] ^ uMask) + uIsNegative
+      uIsNegative = (ul < uIsNegative).asWord
+
+      let vl = (v[i] ^ vMask) + vIsNegative
+      vIsNegative = (vl < vIsNegative).asWord
+
+      let rl = ((ul & vl) ^ bothNegativeMask) + bothNegative
+      bothNegative = (rl < bothNegative).asWord
+
+      result[i] = rl
+    }
+
+    assert(vIsNegative == 0)
+
+    for i in v.count..<resultCount {
+      let ul = (u[i] ^ uMask) + uIsNegative
+      uIsNegative = (ul < uIsNegative).asWord
+
+      let rl = ( (ul & vMask) ^ bothNegativeMask) + bothNegative
+      bothNegative = (rl < bothNegative).asWord
+
+      result[i] = rl
+    }
+
+    if bothNegative.isTrue {
+      result[resultCount] = bothNegative
+    }
+
+    result.fixInvariants()
+    self.storage = result
+  }
+
   // MARK: - Or
   // MARK: - Xor
 
@@ -93,7 +142,7 @@ extension BigIntHeap {
   ///
   /// But remember that in this case it will be used as collection,
   /// that means that eny additional data (sign etc.) should be ignored.
-  internal func twoComplement() -> BigIntStorage {
+  internal func asTwoComplement() -> BigIntStorage {
     if self.isZero {
       return self.storage
     }

@@ -27,7 +27,7 @@ internal struct BigIntHeap: Equatable {
 
   /// `0` is also positive.
   internal var isPositive: Bool {
-    return !self.isNegative
+    return self.storage.isPositive
   }
 
   internal var isNegative: Bool {
