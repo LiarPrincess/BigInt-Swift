@@ -1,18 +1,33 @@
 // swiftlint:disable function_body_length
+// swiftlint:disable file_length
 
-// Most of the code was inspired from: https://gmplib.org
+// Most of the code was taken from: https://gmplib.org
+// GMP function name is in comment obove method name.
 
 // MARK: - Helper extensions
 
+// Implement missing pieces from 'C' integer api.
+
 extension Bool {
+
   fileprivate var asWord: BigIntStorage.Word {
     return self ? 1 : 0
   }
 }
 
 extension BigIntStorage.Word {
+
   fileprivate var isTrue: Bool {
     return self != 0
+  }
+
+  /// This implements `-` before unsigned number.
+  ///
+  /// It works this way:
+  /// - if it is `0` -> stay `0`
+  /// - otherwise -> `MAX - x + 1`, so in our case `MAX - 1 + 1 = MAX`
+  fileprivate var allOneIfTrueOtherwiseAllZero: BigIntStorage.Word {
+    return self.isTrue ? Self.max : Self.zero
   }
 }
 
@@ -62,16 +77,13 @@ extension BigIntHeap {
     let u = self.storage.count <= other.storage.count ? other.storage : self.storage
     assert(v.count <= u.count)
 
-    var vIsNegative: Word = v.isNegative.asWord
-    var uIsNegative: Word = u.isNegative.asWord
-    var bothNegative: Word = vIsNegative & uIsNegative
+    var vIsNegative = v.isNegative.asWord
+    var uIsNegative = u.isNegative.asWord
+    var bothNegative = vIsNegative & uIsNegative
 
-    // '-' before unsigned number works this way:
-    // - if it is '0' -> stay '0'
-    // - any other number -> MAX - x + 1, so in our case MAX - 1 + 1 = MAX
-    let vMask: Word = vIsNegative.isTrue ? .max : .zero
-    let uMask: Word = uIsNegative.isTrue ? .max : .zero
-    let bothNegativeMask: Word = bothNegative.isTrue ? .max : .zero
+    let vMask = vIsNegative.allOneIfTrueOtherwiseAllZero
+    let uMask = uIsNegative.allOneIfTrueOtherwiseAllZero
+    let bothNegativeMask = bothNegative.allOneIfTrueOtherwiseAllZero
 
     // If the smaller input is positive, higher words don't matter.
     let resultCount = v.isPositive ? v.count : u.count
@@ -132,16 +144,13 @@ extension BigIntHeap {
     let u = self.storage.count <= other.storage.count ? other.storage : self.storage
     assert(v.count <= u.count)
 
-    var vIsNegative: Word = v.isNegative.asWord
-    var uIsNegative: Word = u.isNegative.asWord
-    var anyNegative: Word = vIsNegative | uIsNegative
+    var vIsNegative = v.isNegative.asWord
+    var uIsNegative = u.isNegative.asWord
+    var anyNegative = vIsNegative | uIsNegative
 
-    // '-' before unsigned number works this way:
-    // - if it is '0' -> stay '0'
-    // - any other number -> MAX - x + 1, so in our case MAX - 1 + 1 = MAX
-    let vMask: Word = vIsNegative.isTrue ? .max : .zero
-    let uMask: Word = uIsNegative.isTrue ? .max : .zero
-    let anyNegativeMask: Word = anyNegative.isTrue ? .max : .zero
+    let vMask = vIsNegative.allOneIfTrueOtherwiseAllZero
+    let uMask = uIsNegative.allOneIfTrueOtherwiseAllZero
+    let anyNegativeMask = anyNegative.allOneIfTrueOtherwiseAllZero
 
     // If the smaller input is negative, by sign extension higher words don't matter.
     let resultCount = vMask.isTrue ? v.count : u.count
@@ -182,6 +191,70 @@ extension BigIntHeap {
   }
 
   // MARK: - Xor
+
+  /// void
+  /// mpz_xor (mpz_t r, const mpz_t u, const mpz_t v)
+  ///
+  /// Variable names mostly taken from GMP.
+  internal mutating func xor(other: BigIntHeap) {
+    if self.isZero {
+      self.storage = other.storage
+      return
+    }
+
+    if other.isZero {
+      return
+    }
+
+    // 'v' is smaller, 'u' is bigger
+    let v = self.storage.count <= other.storage.count ? self.storage : other.storage
+    let u = self.storage.count <= other.storage.count ? other.storage : self.storage
+    assert(v.count <= u.count)
+
+    var vIsNegative = v.isNegative.asWord
+    var uIsNegative = u.isNegative.asWord
+    var onlyOneNegative = vIsNegative ^ uIsNegative
+
+    let vMask = vIsNegative.allOneIfTrueOtherwiseAllZero
+    let uMask = uIsNegative.allOneIfTrueOtherwiseAllZero
+    let onlyOneNegativeMask = onlyOneNegative.allOneIfTrueOtherwiseAllZero
+
+    let resultCount = u.count
+    var result = BigIntStorage(repeating: 0, count: resultCount + Int(onlyOneNegative))
+
+    for i in 0..<v.count {
+      let ul = (u[i] ^ uMask) + uIsNegative
+      uIsNegative = (ul < uIsNegative).asWord
+
+      let vl = (v[i] ^ vMask) + vIsNegative
+      vIsNegative = (vl < vIsNegative).asWord
+
+      let rl = (ul ^ vl ^ onlyOneNegativeMask) + onlyOneNegative
+      onlyOneNegative = (rl < onlyOneNegative).asWord
+
+      result[i] = rl
+    }
+
+    assert(vIsNegative == 0)
+
+    for i in v.count..<resultCount {
+      let ul = (u[i] ^ uMask) + uIsNegative
+      uIsNegative = (ul < uIsNegative).asWord
+
+      let rl = (ul ^ uMask) + onlyOneNegative
+      onlyOneNegative = (rl < onlyOneNegative).asWord
+
+      result[i] = rl
+    }
+
+    if onlyOneNegative.isTrue {
+      result[resultCount] = onlyOneNegative
+    }
+
+    result.isNegative = onlyOneNegative.isTrue
+    result.fixInvariants()
+    self.storage = result
+  }
 
   // MARK: - Two complement
 
