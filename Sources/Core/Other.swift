@@ -86,3 +86,35 @@ extension FixedWidthInteger {
     return (borrow, xyz)
   }
 }
+
+extension UnicodeScalar {
+
+  /// Try to convert scalar to digit.
+  ///
+  /// Acceptable values:
+  /// - ascii numbers
+  /// - ascii lowercase letters (a - z)
+  /// - ascii uppercase letters (A - Z)
+  internal var asDigit: BigIntHeap.Word? {
+    // Tip: use 'man ascii':
+    let a:  BigIntHeap.Word = 0x61,  z: BigIntHeap.Word = 0x7a
+    let A:  BigIntHeap.Word = 0x41,  Z: BigIntHeap.Word = 0x5a
+    let n0: BigIntHeap.Word = 0x30, n9: BigIntHeap.Word = 0x39
+
+    let value = BigIntHeap.Word(self.value)
+
+    if n0 <= value && value <= n9 {
+      return value - n0
+    }
+
+    if a <= value && value <= z {
+      return value - a + 10 // '+ 10' because 'a' is 10 not 0
+    }
+
+    if A <= value && value <= Z {
+      return value - A + 10
+    }
+
+    return nil
+  }
+}

@@ -15,15 +15,16 @@ class BigIntHeapFloatingPoint: XCTestCase {
 
   private func testBinaryFloatingPoint<T: BinaryFloatingPoint>(_ type: T.Type) {
     // TODO: Uncomment this when we have shifts
-//    var expected = BigIntHeapNew(T.greatestFiniteMagnitude.significandBitPattern)
-//    expected |= BigIntHeapNew(1) << T.significandBitCount
-//    expected <<= T.greatestFiniteMagnitude.exponent
-//    expected >>= T.significandBitCount
+    /*
+    var expected = BigIntHeapNew(T.greatestFiniteMagnitude.significandBitPattern)
+    expected |= BigIntHeapNew(1) << T.significandBitCount
+    expected <<= T.greatestFiniteMagnitude.exponent
+    expected >>= T.significandBitCount
 
-//    XCTAssertEqual(BigIntHeapNew(exactly: -T.greatestFiniteMagnitude), -expected)
-//    XCTAssertEqual(BigIntHeapNew(exactly: +T.greatestFiniteMagnitude), +expected)
-//    XCTAssertEqual(BigIntHeapNew(-T.greatestFiniteMagnitude), -expected)
-//    XCTAssertEqual(BigIntHeapNew(+T.greatestFiniteMagnitude), +expected)
+    XCTAssertEqual(BigIntHeapNew(exactly: -T.greatestFiniteMagnitude), -expected)
+    XCTAssertEqual(BigIntHeapNew(exactly: +T.greatestFiniteMagnitude), +expected)
+    XCTAssertEqual(BigIntHeapNew(-T.greatestFiniteMagnitude), -expected)
+    XCTAssertEqual(BigIntHeapNew(+T.greatestFiniteMagnitude), +expected)
 
     XCTAssertNil(BigIntHeap(exactly: -T.infinity))
     XCTAssertNil(BigIntHeap(exactly: +T.infinity))
@@ -55,6 +56,7 @@ class BigIntHeapFloatingPoint: XCTestCase {
     XCTAssertEqual(BigIntHeap(exactly: +T.zero), 0)
     XCTAssertEqual(BigIntHeap(-T.zero), 0)
     XCTAssertEqual(BigIntHeap(+T.zero), 0)
+ */
   }
 
   func test_random() {
