@@ -1,9 +1,11 @@
 import Foundation
 
+// TODO: Zero singleton
+
 // swiftlint:disable file_length
 
-/// The binary representation of the `BigInt` on the heap,
-/// with the least significant word at index `0`.
+/// Basically a collection that represents `BigInt` on the heap.
+/// Least significant word is at index `0`.
 ///
 /// It has no trailing zero elements.
 /// If `self.isZero`, then `isNegative == false` and `self.isEmpty == true`.
@@ -17,7 +19,9 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   private struct Header {
 
-    /// `abs(countAndSign)` is the number of used words.
+    /// We store both sign and count in a single field.
+    ///
+    /// Use `abs(countAndSign)` to get count.
     /// Sign of the `countAndSign` is the sign of the whole `BigInt`.
     ///
     /// Look at us being clever!
@@ -108,6 +112,15 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   internal init(repeating repeatedValue: Word, count: Int) {
     self.init(minimumCapacity: count)
     Self.memset(dst: self.buffer, value: repeatedValue, count: count)
+  }
+
+  internal init(isNegative: Bool, word: Word) {
+    self.init(minimumCapacity: 1)
+    self.append(word)
+
+    if word != 0 {
+      self.isNegative = isNegative
+    }
   }
 
   internal init(value: UInt) {
@@ -290,20 +303,20 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
     self.guaranteeUniqueBufferReference()
 
-    let copyCount = self.count - k
-    assert(copyCount > 0) // We checked 'k >= self.count'
+    let newCount = self.count - k
+    assert(newCount > 0) // We checked 'k >= self.count'
 
     self.buffer.withUnsafeMutablePointerToElements { startPtr in
-      // Copy 'copyCount' elements to front
+      // Copy 'newCount' elements to front
       let copySrcPtr = startPtr.advanced(by: k)
-      startPtr.assign(from: copySrcPtr, count: copyCount)
+      startPtr.assign(from: copySrcPtr, count: newCount)
 
-      // Clean elements after 'copyCount'
-      let afterCopiedElementsPtr = startPtr.advanced(by: copyCount)
+      // Clean elements after 'newCount'
+      let afterCopiedElementsPtr = startPtr.advanced(by: newCount)
       afterCopiedElementsPtr.assign(repeating: 0, count: k)
     }
 
-    self.count = copyCount
+    self.count = newCount
   }
 
   // MARK: - Set
@@ -313,7 +326,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   /// Set `self` to represent given `UInt`.
   internal mutating func set(to value: UInt) {
     // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do this anyway.
+    // because all of the functions we are using will do it anyway.
 
     self.setToZero()
 
@@ -325,7 +338,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   /// Set `self` to represent given `Int`.
   internal mutating func set(to value: Int) {
     // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do this anyway.
+    // because all of the functions we are using will do it anyway.
 
     self.setToZero()
 
@@ -469,6 +482,14 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     if self.buffer.isUniqueReference() && self.capacity >= minimumCapacity {
       return
     }
+
+    // TODO: This from CPython
+    /*
+      * The growth pattern is:  0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
+      * Note: new_allocated won't overflow because the largest possible value
+      *       is PY_SSIZE_T_MAX * (9 / 8) + 6 which always fits in a size_t.
+     new_allocated = (size_t)newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6);
+     */
 
     // Well... shit, we have to allocate new buffer,
     // but we can grow at the same time (2 birds - 1 stone).

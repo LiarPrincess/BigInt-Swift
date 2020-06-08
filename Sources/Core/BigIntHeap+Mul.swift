@@ -37,7 +37,7 @@ extension BigIntHeap {
     // But wait, there is more:
     // if 'other' is a power of 2 -> we can just shift left
     let otherLSB = other.trailingZeroBitCount
-    let isOtherPowerOf2 = other >> otherLSB == 1
+    let isOtherPowerOf2 = (other >> otherLSB) == 1
     if isOtherPowerOf2 {
       self.shiftLeft(count: otherLSB.magnitude)
       return
