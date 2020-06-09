@@ -58,7 +58,7 @@ internal struct BigIntHeap: Equatable {
 
   /// Init with storage set to `0`.
   internal init() {
-    self.storage = BigIntStorage(minimumCapacity: 0)
+    self.storage = .zero
   }
 
   internal init(minimumStorageCapacity: Int) {
@@ -67,14 +67,9 @@ internal struct BigIntHeap: Equatable {
 
   internal init<T: BinaryInteger>(_ value: T) {
     // Assuming that biggest 'BinaryInteger' in Swift is representable by 'Word'.
+    let isNegative = value.isNegative
     let magnitude = Word(value.magnitude)
-    self.storage = BigIntStorage(value: magnitude)
-
-    if value.isNegative {
-      self.storage.isNegative = true
-    }
-
-    self.checkInvariants()
+    self.storage = BigIntStorage(isNegative: isNegative, magnitude: magnitude)
   }
 
   internal init(storage: BigIntStorage) {

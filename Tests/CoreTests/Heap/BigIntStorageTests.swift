@@ -7,8 +7,11 @@ private typealias Word = BigIntStorage.Word
 
 extension BigIntStorage {
 
-  fileprivate init(words: Word...) {
+  fileprivate init(isNegative: Bool, words: Word...) {
+    assert(!words.isEmpty, "Use different 'init' to create zero")
+
     self.init(minimumCapacity: words.count)
+    self.isNegative = isNegative
 
     for word in words {
       self.append(word)
@@ -35,7 +38,7 @@ class BigIntStorageTests: XCTestCase {
   // MARK: - Properties
 
   func test_isNegative_cow() {
-    let orginal = BigIntStorage(words: 0, 1, 2)
+    let orginal = BigIntStorage(isNegative: false, words: 0, 1, 2)
     let orginalIsNegative = orginal.isNegative
 
     var copy = orginal
@@ -48,7 +51,7 @@ class BigIntStorageTests: XCTestCase {
   // MARK: - Subscript
 
   func test_subscript_get() {
-    let storage = BigIntStorage(words: 0, 1, 2, 3)
+    let storage = BigIntStorage(isNegative: false, words: 0, 1, 2, 3)
 
     for i in 0..<storage.count {
       XCTAssertEqual(storage[i], Word(i))
@@ -56,7 +59,7 @@ class BigIntStorageTests: XCTestCase {
   }
 
   func test_subscript_set() {
-    var storage = BigIntStorage(words: 0, 1, 2, 3)
+    var storage = BigIntStorage(isNegative: false, words: 0, 1, 2, 3)
 
     for i in 0..<storage.count {
       storage[i] += 1
@@ -65,7 +68,7 @@ class BigIntStorageTests: XCTestCase {
   }
 
   func test_subscript_set_cow() {
-    let orginal = BigIntStorage(words: 0, 1, 2)
+    let orginal = BigIntStorage(isNegative: false, words: 0, 1, 2)
 
     var copy = orginal
     copy[0] = 100
@@ -81,7 +84,7 @@ class BigIntStorageTests: XCTestCase {
     }
   }
 
-  // MARK: - Append
+  // MARK: - Append word
 
   func test_append() {
     let count = 4
@@ -118,21 +121,20 @@ class BigIntStorageTests: XCTestCase {
   }
 
   func test_append_cow() {
-    let orginal = BigIntStorage(words: 0, 1, 2)
+    let orginal = BigIntStorage(isNegative: false, words: 0, 1, 2)
 
     var copy = orginal
     copy.append(100)
 
-    XCTAssertEqual(orginal, BigIntStorage(words: 0, 1, 2))
-    XCTAssertEqual(copy, BigIntStorage(words: 0, 1, 2, 100))
+    XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 0, 1, 2))
+    XCTAssertEqual(copy, BigIntStorage(isNegative: false, words: 0, 1, 2, 100))
   }
 
   // MARK: - Equatable
 
   func test_equatable() {
-    let orginal = BigIntStorage(words: 0, 1, 2)
-
-    XCTAssertEqual(orginal, BigIntStorage(words: 0, 1, 2))
+    let orginal = BigIntStorage(isNegative: false, words: 0, 1, 2)
+    XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 0, 1, 2))
 
     var negative = orginal
     negative.isNegative.toggle()
@@ -151,74 +153,74 @@ class BigIntStorageTests: XCTestCase {
     XCTAssertNotEqual(orginal, changedLast)
   }
 
-  // MARK: - Set
+  // MARK: - Set unsigned
+
+  private let unsignedValues: [UInt] = [103, 0, .max, .min]
 
   func test_set_UInt() {
-    var storage = BigIntStorage(words: 1, 2, 3)
+    var storage = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
-    let values: [UInt] = [103, 0, .max, .min]
-
-    for value in values {
+    for value in self.unsignedValues {
+      print(value)
       storage.set(to: value)
-      XCTAssertEqual(storage, BigIntStorage(value: value))
+      XCTAssertEqual(storage, BigIntStorage(isNegative: false, magnitude: value))
     }
   }
 
   func test_set_UInt_cow() {
-    let orginal = BigIntStorage(value: 5)
+    let orginal = BigIntStorage(isNegative: true, words: 1, 2, 3)
 
-    let values: [UInt] = [103, 0, .max, .min]
-
-    for value in values {
+    for value in self.unsignedValues {
       var copy = orginal
       copy.set(to: value)
 
-      XCTAssertEqual(orginal, BigIntStorage(value: 5))
-      XCTAssertEqual(copy, BigIntStorage(value: value))
+      XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 1, 2, 3))
+      XCTAssertEqual(copy, BigIntStorage(isNegative: false, magnitude: value))
     }
   }
 
+  // MARK: - Set signed
+
+  private let signedValues: [Int] = [103, 0, -104, .max, .min]
+
   func test_set_Int() {
-    var storage = BigIntStorage(words: 1, 2, 3)
+    var storage = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
-    let values: [Int] = [103, 0, -104, .max, .min]
-
-    for value in values {
+    for value in self.signedValues {
       storage.set(to: value)
-      XCTAssertEqual(storage, BigIntStorage(value: value))
+      XCTAssertEqual(storage, BigIntStorage(isNegative: false, magnitude: value.magnitude))
     }
   }
 
   func test_set_Int_cow() {
-    let orginal = BigIntStorage(value: 5)
+    let orginal = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
-    let values: [Int] = [103, 0, -104, .max, .min]
-
-    for value in values {
+    for value in self.signedValues {
       var copy = orginal
       copy.set(to: value)
 
-      XCTAssertEqual(orginal, BigIntStorage(value: 5))
-      XCTAssertEqual(copy, BigIntStorage(value: value))
+      XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 1, 2, 3))
+      XCTAssertEqual(copy, BigIntStorage(isNegative: false, magnitude: value.magnitude))
     }
   }
 
   // MARK: - Transform
 
   func test_transform() {
-    var storage = BigIntStorage(words: 1, 2, 3)
+    var storage = BigIntStorage(isNegative: false, words: 1, 2, 3)
     storage.transformEveryWord { $0 + 1 }
-    XCTAssertEqual(storage, BigIntStorage(words: 2, 3, 4))
+
+    XCTAssertEqual(storage, BigIntStorage(isNegative: false, words: 2, 3, 4))
   }
 
   func test_transform_cow() {
-    let orginal = BigIntStorage(words: 1, 2, 3)
+    let orginal = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
     var copy = orginal
     copy.transformEveryWord { $0 + 1 }
 
-    XCTAssertEqual(orginal, BigIntStorage(words: 1, 2, 3))
-    XCTAssertEqual(copy, BigIntStorage(words: 2, 3, 4))
+    XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 1, 2, 3))
+    XCTAssertEqual(copy, BigIntStorage(isNegative: false, words: 2, 3, 4))
   }
 
   // MARK: - Description
@@ -226,7 +228,7 @@ class BigIntStorageTests: XCTestCase {
   /// Please note that `capacity` is implementation dependent,
   /// if it changes then just fix test.
   func test_description() {
-    let storage = BigIntStorage(words: 1, 2, 3)
+    let storage = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
     let result = String(describing: storage)
     let expected = "BigIntStorage(isNegative: false, capacity: 3, words: [0x1, 0x10, 0x11])"

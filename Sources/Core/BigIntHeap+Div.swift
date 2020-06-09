@@ -92,7 +92,7 @@ extension BigIntHeap {
       }()
 
       let remainder = BigIntStorage(isNegative: remainderIsNegative,
-                                    word: unsignedRemainder)
+                                    magnitude: unsignedRemainder)
 
       self.storage.isNegative = resultIsNegative
       self.fixInvariants()

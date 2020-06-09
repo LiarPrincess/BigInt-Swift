@@ -1,7 +1,5 @@
 import Foundation
 
-// TODO: Zero singleton
-
 // swiftlint:disable file_length
 
 /// Basically a collection that represents `BigInt` on the heap.
@@ -37,6 +35,13 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   internal typealias Word = UInt
   private typealias Buffer = ManagedBufferPointer<Header, Word>
+
+  // MARK: - Predefined values
+
+  /// Value to be used when we are `0`.
+  ///
+  /// Use this to avoid allocating new empty buffer every time.
+  internal static var zero = BigIntStorage(minimumCapacity: 0)
 
   // MARK: - Properties
 
@@ -105,32 +110,28 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   // MARK: - Init
 
+  /// Init with the value of `0` and specified capacity.
   internal init(minimumCapacity: Int) {
-    self.buffer = Self.createBuffer(minimumCapacity: minimumCapacity)
+    self.buffer = Self.createBuffer(
+      header: Header(isNegative: false, count: 0),
+      minimumCapacity: minimumCapacity
+    )
   }
 
+  /// Init positive value with magnitude filled with `repeatedValue`.
   internal init(repeating repeatedValue: Word, count: Int) {
     self.init(minimumCapacity: count)
     Self.memset(dst: self.buffer, value: repeatedValue, count: count)
   }
 
-  internal init(isNegative: Bool, word: Word) {
-    self.init(minimumCapacity: 1)
-    self.append(word)
-
-    if word != 0 {
+  internal init(isNegative: Bool, magnitude: Word) {
+    if magnitude == 0 {
+      self = Self.zero
+    } else {
+      self.init(minimumCapacity: 1)
       self.isNegative = isNegative
+      self.append(magnitude)
     }
-  }
-
-  internal init(value: UInt) {
-    self.init(minimumCapacity: 1)
-    self.set(to: value)
-  }
-
-  internal init(value: Int) {
-    self.init(minimumCapacity: 1)
-    self.set(to: value)
   }
 
   // MARK: - Create buffer
@@ -157,14 +158,8 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
   }
 
-  private static func createBuffer(minimumCapacity: Int) -> Buffer {
-    return Self.createBuffer(
-      minimumCapacity: minimumCapacity,
-      header: Header(isNegative: false, count: 0)
-    )
-  }
-
-  private static func createBuffer(minimumCapacity: Int, header: Header) -> Buffer {
+  private static func createBuffer(header: Header,
+                                   minimumCapacity: Int) -> Buffer {
     // swiftlint:disable:next trailing_closure
     return Buffer(
       bufferClass: LetItGo.self,
@@ -192,9 +187,8 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   }
 
   private func checkIndex(index: Int) {
-    // 'Assert' instead of 'precondition', because we control all of the
-    // callers (this type is internal).
-    // And also because we are cocky.
+    // 'Assert' instead of 'precondition',
+    // because we control all of the callers (this type is internal).
     assert(0 <= index && index < self.count, "Index out of range")
   }
 
@@ -263,8 +257,8 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
 
     let new = Self.createBuffer(
-      minimumCapacity: newCount,
-      header: Header(isNegative: self.isNegative, count: newCount)
+      header: Header(isNegative: self.isNegative, count: newCount),
+      minimumCapacity: newCount
     )
 
     self.buffer.withUnsafeMutablePointerToElements { selfStartPtr in
@@ -289,15 +283,14 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Remove first `k` elements.
   internal mutating func dropFirst(_ k: Int) {
-    // swiftlint:disable:next empty_count
-    assert(count >= 0)
+    assert(k >= 0)
 
-    if count.isZero {
+    if k == 0 {
       return
     }
 
     if k >= self.count {
-      self.setToZero()
+      self.removeAll()
       return
     }
 
@@ -317,53 +310,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
 
     self.count = newCount
-  }
-
-  // MARK: - Set
-
-  // TODO: Can we always assume that memory after 'count' is cleared?
-
-  /// Set `self` to represent given `UInt`.
-  internal mutating func set(to value: UInt) {
-    // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do it anyway.
-
-    self.setToZero()
-
-    if value != 0 {
-      self.append(value)
-    }
-  }
-
-  /// Set `self` to represent given `Int`.
-  internal mutating func set(to value: Int) {
-    // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do it anyway.
-
-    self.setToZero()
-
-    if value != 0 {
-      self.append(value.magnitude)
-      self.isNegative = value.isNegative
-    }
-  }
-
-  internal mutating func setToZero() {
-    self.guaranteeUniqueBufferReference()
-
-    let oldCount = self.count
-
-    self.count = 0
-    self.isNegative = false
-
-    // We need to clear the whole buffer,
-    // some code may depend on having '0' after 'self.count'.
-    if oldCount > 0 {
-      self.buffer.withUnsafeMutablePointerToElements { startPtr in
-        startPtr.assign(repeating: 0, count: oldCount)
-        return
-      }
-    }
   }
 
   // MARK: - Transform
@@ -388,6 +334,56 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   internal mutating func reserveCapacity(_ capacity: Int) {
     self.guaranteeUniqueBufferReference(withMinimumCapacity: capacity)
+  }
+
+  // MARK: - Remove all
+
+  private mutating func removeAll() {
+    self.guaranteeUniqueBufferReference()
+
+    // We need to clear the whole buffer,
+    // some code may depend on having '0' after 'self.count'.
+    self.buffer.withUnsafeMutablePointerToElements { startPtr in
+      startPtr.assign(repeating: 0, count: self.count)
+    }
+
+    self.count = 0
+  }
+
+  // MARK: - Set
+
+  // TODO: This should be in 'BigIntHeap'
+
+  internal mutating func setToZero() {
+    self = Self.zero
+  }
+
+  /// Set `self` to represent given `UInt`.
+  internal mutating func set(to value: UInt) {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do it anyway.
+
+    if value == 0 {
+      self.setToZero()
+    } else {
+      self.removeAll()
+      self.isNegative = false
+      self.append(value)
+    }
+  }
+
+  /// Set `self` to represent given `Int`.
+  internal mutating func set(to value: Int) {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do it anyway.
+
+    if value == 0 {
+      self.setToZero()
+    } else {
+      self.removeAll()
+      self.isNegative = value.isNegative
+      self.append(value.magnitude)
+    }
   }
 
   // MARK: - String
@@ -427,16 +423,12 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       return false
     }
 
-    for (l, r) in zip(lhs, rhs) {
-      guard l == r else {
-        return false
-      }
-    }
-
-    return true
+    return zip(lhs, rhs).allSatisfy { $0.0 == $0.1 }
   }
 
   // MARK: - Invariants
+
+  // TODO: This should be in 'BigIntHeap'
 
   internal mutating func fixInvariants() {
     // Trim prefix zeros
@@ -450,6 +442,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
   }
 
+  // TODO: Do not use this! Use 'fixInvariants' instead.
   internal func checkInvariants(source: StaticString = #function) {
     if let last = self.last {
       assert(last != 0, "\(source): zero prefix in BigInt")
@@ -468,8 +461,8 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
     // Well... shit
     let new = Self.createBuffer(
-      minimumCapacity: self.capacity,
-      header: self.buffer.header
+      header: self.buffer.header,
+      minimumCapacity: self.capacity
     )
 
     Self.memcpy(dst: new, src: self.buffer, count: self.count)
@@ -483,22 +476,14 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       return
     }
 
-    // TODO: This from CPython
-    /*
-      * The growth pattern is:  0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
-      * Note: new_allocated won't overflow because the largest possible value
-      *       is PY_SSIZE_T_MAX * (9 / 8) + 6 which always fits in a size_t.
-     new_allocated = (size_t)newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6);
-     */
-
     // Well... shit, we have to allocate new buffer,
     // but we can grow at the same time (2 birds - 1 stone).
     let growFactor = 2
     let capacity = Swift.max(minimumCapacity, growFactor * self.capacity, 1)
 
     let new = Self.createBuffer(
-      minimumCapacity: capacity,
-      header: self.buffer.header
+      header: self.buffer.header,
+      minimumCapacity: capacity
     )
 
     Self.memcpy(dst: new, src: self.buffer, count: self.count)

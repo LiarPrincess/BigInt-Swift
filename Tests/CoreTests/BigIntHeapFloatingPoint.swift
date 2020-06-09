@@ -8,14 +8,14 @@ private typealias Word = BigIntStorage.Word
 
 class BigIntHeapFloatingPoint: XCTestCase {
 
+  // TODO: Uncomment this when we have shifts
+/*
   func test_special() {
     self.testBinaryFloatingPoint(Float32.self)
     self.testBinaryFloatingPoint(Float64.self)
   }
 
   private func testBinaryFloatingPoint<T: BinaryFloatingPoint>(_ type: T.Type) {
-    // TODO: Uncomment this when we have shifts
-    /*
     var expected = BigIntHeapNew(T.greatestFiniteMagnitude.significandBitPattern)
     expected |= BigIntHeapNew(1) << T.significandBitCount
     expected <<= T.greatestFiniteMagnitude.exponent
@@ -56,7 +56,6 @@ class BigIntHeapFloatingPoint: XCTestCase {
     XCTAssertEqual(BigIntHeap(exactly: +T.zero), 0)
     XCTAssertEqual(BigIntHeap(-T.zero), 0)
     XCTAssertEqual(BigIntHeap(+T.zero), 0)
- */
   }
 
   func test_random() {
@@ -76,4 +75,5 @@ class BigIntHeapFloatingPoint: XCTestCase {
       XCTAssertEqual(BigIntHeap(large), BigIntHeap(Int64(large)))
     }
   }
+*/
 }
