@@ -256,6 +256,9 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       return
     }
 
+    // We do not have to call 'guaranteeUniqueBufferReference',
+    // because we will be allocating new buffer (which is trivially unique).
+
     let new = Self.createBuffer(
       header: Header(isNegative: self.isNegative, count: newCount),
       minimumCapacity: newCount

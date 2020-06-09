@@ -1,6 +1,8 @@
 import XCTest
 @testable import Core
 
+// swiftlint:disable file_length
+
 private typealias Word = BigIntStorage.Word
 
 // MARK: - Init helper
@@ -8,6 +10,10 @@ private typealias Word = BigIntStorage.Word
 extension BigIntStorage {
 
   fileprivate init(isNegative: Bool, words: Word...) {
+    self.init(isNegative: isNegative, words: words)
+  }
+
+  fileprivate init(isNegative: Bool, words: [Word]) {
     assert(!words.isEmpty, "Use different 'init' to create zero")
 
     self.init(minimumCapacity: words.count)
@@ -36,6 +42,16 @@ class BigIntStorageTests: XCTestCase {
   }
 
   // MARK: - Properties
+
+  func test_isNegative_isPositive() {
+    var storage = BigIntStorage(isNegative: false, words: 0, 1, 2, 3)
+    XCTAssertTrue(storage.isPositive)
+    XCTAssertFalse(storage.isNegative)
+
+    storage.isNegative.toggle()
+    XCTAssertFalse(storage.isPositive)
+    XCTAssertTrue(storage.isNegative)
+  }
 
   func test_isNegative_cow() {
     let orginal = BigIntStorage(isNegative: false, words: 0, 1, 2)
@@ -94,6 +110,8 @@ class BigIntStorageTests: XCTestCase {
       storage.append(Word(i))
     }
 
+    XCTAssertEqual(storage.count, count)
+
     for i in 0..<count {
       XCTAssertEqual(storage[i], Word(i))
     }
@@ -106,11 +124,13 @@ class BigIntStorageTests: XCTestCase {
     for i in 0..<oldCapacity {
       storage.append(Word(i))
     }
+    XCTAssertEqual(storage.count, oldCapacity)
     XCTAssertEqual(storage.capacity, oldCapacity)
 
     // This should grow
     storage.append(100)
 
+    XCTAssertEqual(storage.count, oldCapacity + 1)
     XCTAssertNotEqual(storage.capacity, oldCapacity)
     XCTAssertGreaterThan(storage.capacity, oldCapacity)
 
@@ -128,6 +148,173 @@ class BigIntStorageTests: XCTestCase {
 
     XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 0, 1, 2))
     XCTAssertEqual(copy, BigIntStorage(isNegative: false, words: 0, 1, 2, 100))
+  }
+
+  // MARK: - Append collection
+
+  func test_appendCollection_toZero() {
+    var storage = BigIntStorage(isNegative: false, magnitude: 0)
+    XCTAssertTrue(storage.isZero)
+    XCTAssertEqual(storage.count, 0)
+
+    let words: [Word] = [.min, 1 , 5, .max, 7]
+    storage.append(contentsOf: words)
+
+    XCTAssertFalse(storage.isZero)
+    XCTAssertEqual(storage.count, words.count)
+
+    for (s, w) in zip(storage, words) {
+      XCTAssertEqual(s, w)
+    }
+
+    // Check if we modified the shared value.
+    XCTAssertTrue(BigIntStorage.zero.isZero)
+  }
+
+  func test_appendCollection_toNonZero() {
+    let initialWords: [Word] = [.min, 1 , 5, .max, 7]
+    var storage = BigIntStorage(isNegative: false, words: initialWords)
+    XCTAssertEqual(storage.count, initialWords.count)
+
+    let newWords: [Word] = [.min, .max, 7, .min, .max, 7, .min, .max, 7]
+    storage.append(contentsOf: newWords)
+
+    let finalWords = initialWords + newWords
+    XCTAssertEqual(storage.count, finalWords.count)
+
+    for (s, w) in zip(storage, finalWords) {
+      XCTAssertEqual(s, w)
+    }
+  }
+
+  func test_appendCollection_cow() {
+    let initialWords: [Word] = [.min, 1 , 5, .max, 7]
+    let orginal = BigIntStorage(isNegative: false, words: initialWords)
+
+    let newWords: [Word] = [.min, .max, 7, .min, .max, 7, .min, .max, 7]
+    var copy = orginal
+    copy.append(contentsOf: newWords)
+
+    let finalWords = initialWords + newWords
+    XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: initialWords))
+    XCTAssertEqual(copy, BigIntStorage(isNegative: false, words: finalWords))
+  }
+
+  // MARK: - Prepend
+
+  func test_prepend_insideExistingBuffer() {
+    let initialWords: [Word] = [.max, 1 , .min, 7]
+    var storage = BigIntStorage(isNegative: false, words: initialWords)
+
+    let prependCount = storage.capacity - storage.count
+    XCTAssert(
+      prependCount != 0,
+      "Expected to have some space left (just modify 'initialWords' to fix)"
+    )
+
+    storage.prepend(42, repeated: prependCount)
+    XCTAssertEqual(storage.count, storage.capacity)
+    XCTAssertEqual(storage.count, initialWords.count + prependCount)
+
+    let finalWords = [Word](repeating: 42, count: prependCount) + initialWords
+    XCTAssertEqual(storage, BigIntStorage(isNegative: false, words: finalWords))
+  }
+
+  func test_prepend_inNewBuffer() {
+    let initialWords: [Word] = [.max, 1 , .min, 7]
+    var storage = BigIntStorage(isNegative: false, words: initialWords)
+
+    let prependCount = storage.capacity // This will force allocation
+    storage.prepend(42, repeated: prependCount)
+    XCTAssertEqual(storage.count, initialWords.count + prependCount)
+
+    let finalWords = [Word](repeating: 42, count: prependCount) + initialWords
+    XCTAssertEqual(storage, BigIntStorage(isNegative: false, words: finalWords))
+  }
+
+  func test_prepend_cow() {
+    let initialWords: [Word] = [.max, 1 , .min, 7]
+    let orginal = BigIntStorage(isNegative: false, words: initialWords)
+
+    var copy = orginal
+
+    let prependCount = copy.capacity - copy.count
+    XCTAssert(
+      prependCount != 0,
+      "Expected to have some space left (just modify 'initialWords' to fix)"
+    )
+
+    // This should always copy the 'orginal' buffer
+    copy.prepend(42, repeated: prependCount)
+
+    XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: initialWords))
+  }
+
+  // MARK: - Drop first
+
+  func test_dropFirst_zero() {
+    let initialWords: [Word] = [.max, 1 , .min, 7]
+    var storage = BigIntStorage(isNegative: false, words: initialWords)
+
+    storage.dropFirst(0)
+
+    XCTAssertEqual(storage.count, initialWords.count)
+
+    for (s, w) in zip(storage, initialWords) {
+      XCTAssertEqual(s, w)
+    }
+  }
+
+  func test_dropFirst_moreThanCount() {
+    let initialWords: [Word] = [.max, 1 , .min, 7]
+    var storage = BigIntStorage(isNegative: false, words: initialWords)
+
+    storage.dropFirst(initialWords.count * 2)
+
+    XCTAssertEqual(storage.count, 0)
+  }
+
+  func test_dropFirst_moreThanCount_cow() {
+    let initialWords: [Word] = [.max, 1 , .min, 7]
+    let orginal = BigIntStorage(isNegative: false, words: initialWords)
+
+    var copy = orginal
+    copy.dropFirst(initialWords.count * 2)
+
+    XCTAssertEqual(orginal.count, initialWords.count)
+
+    for (s, w) in zip(orginal, initialWords) {
+      XCTAssertEqual(s, w)
+    }
+  }
+
+  func test_dropFirst_lessThanCount() {
+    let initialWords: [Word] = [.max, 1 , .min, 7, 42]
+    var storage = BigIntStorage(isNegative: false, words: initialWords)
+
+    let dropCount = 3
+    storage.dropFirst(dropCount)
+
+    let expected = initialWords.dropFirst(dropCount)
+    XCTAssertEqual(storage.count, expected.count)
+
+    for (s, w) in zip(storage, expected) {
+      XCTAssertEqual(s, w)
+    }
+  }
+
+  func test_dropFirst_lessThanCount_cow() {
+    let initialWords: [Word] = [.max, 1 , .min, 7, 42]
+    var orginal = BigIntStorage(isNegative: false, words: initialWords)
+
+    var copy = orginal
+    copy.dropFirst(3)
+
+    XCTAssertEqual(orginal.count, initialWords.count)
+
+    for (s, w) in zip(orginal, initialWords) {
+      XCTAssertEqual(s, w)
+    }
   }
 
   // MARK: - Equatable
