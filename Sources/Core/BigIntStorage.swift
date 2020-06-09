@@ -5,6 +5,8 @@ import Foundation
 /// Basically a collection that represents `BigInt` on the heap.
 /// Least significant word is at index `0`.
 ///
+/// This is only 'storage', it does not have any 'BigInt' related logic.
+///
 /// It has no trailing zero elements.
 /// If `self.isZero`, then `isNegative == false` and `self.isEmpty == true`.
 ///
@@ -17,19 +19,29 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   private struct Header {
 
+    fileprivate static let signMask = UInt(1) << (UInt.bitWidth - 1)
+    fileprivate static let countMask = ~Self.signMask
+
     /// We store both sign and count in a single field.
     ///
-    /// Use `abs(countAndSign)` to get count.
-    /// Sign of the `countAndSign` is the sign of the whole `BigInt`.
+    /// `Sign` is stored in most significant bit:
+    /// - 0 for positive numbers
+    /// - 1 for negative numbers
     ///
-    /// Look at us being clever!
-    fileprivate var countAndSign: Int
+    /// Other bits represent `count`.
+    ///
+    /// We could use use negative numbers for negative sign,
+    /// but then we would not be able to represent `-0`.
+    /// `-0` could be usefull when user decides to set sign first
+    /// and then magnitude. If the current value is `0` then even though user
+    /// would set `sign` to negative `Swift` would still treat it as positive (`+0`).
+    fileprivate var signAndCount: UInt
 
     fileprivate init(isNegative: Bool, count: Int) {
       // swiftlint:disable:next empty_count
       assert(count >= 0)
-      let sign = isNegative ? -1 : 1
-      self.countAndSign = sign * count
+      let sign = isNegative ? Self.signMask : 0
+      self.signAndCount = sign | count.magnitude
     }
   }
 
@@ -53,10 +65,11 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   internal var isNegative: Bool {
     get {
-      return self.buffer.header.countAndSign < 0
+      let signAndCount = self.buffer.header.signAndCount
+      return (signAndCount & Header.signMask) == Header.signMask
     }
     set {
-      // Avoid copy.
+      // Avoid possible copy in 'self.guaranteeUniqueBufferReference()'.
       // This check is free because we have to get header from the memory anyway.
       if self.isNegative == newValue {
         return
@@ -66,33 +79,35 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       // just assume that user know what they are doing.
 
       self.guaranteeUniqueBufferReference()
-      let sign = newValue ? -1 : 1
-      self.buffer.header.countAndSign = sign * self.count
+      let sign = newValue ? Header.signMask : 0
+      let count = self.buffer.header.signAndCount & Header.countMask
+      self.buffer.header.signAndCount = sign | count
     }
   }
 
   /// `0` is also positive.
   internal var isPositive: Bool {
-    return !self.isNegative
+    get { return !self.isNegative }
+    set { self.isNegative = !newValue }
   }
 
   internal private(set) var count: Int {
     get {
-      let raw = self.buffer.header.countAndSign
-      return raw < 0 ? -raw : raw
+      let raw = self.buffer.header.signAndCount & Header.countMask
+      return Int(bitPattern: raw)
     }
     set {
       assert(newValue >= 0)
 
-      // Avoid copy.
+      // Avoid possible copy in 'self.guaranteeUniqueBufferReference()'.
       // This check is free because we have to get header from the memory anyway.
       if self.count == newValue {
         return
       }
 
       self.guaranteeUniqueBufferReference()
-      let sign = self.isNegative ? -1 : 1
-      self.buffer.header.countAndSign = sign * newValue
+      let sign = self.isNegative ? Header.signMask : 0
+      self.buffer.header.signAndCount = sign | newValue.magnitude
     }
   }
 
@@ -418,15 +433,13 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   // MARK: - Equatable
 
+  // This is mostly for unit tests
   internal static func == (lhs: Self, rhs: Self) -> Bool {
     let lhsHeader = lhs.buffer.header
     let rhsHeader = rhs.buffer.header
 
-    guard lhsHeader.countAndSign == rhsHeader.countAndSign else {
-      return false
-    }
-
-    return zip(lhs, rhs).allSatisfy { $0.0 == $0.1 }
+    return lhsHeader.signAndCount == rhsHeader.signAndCount
+      && zip(lhs, rhs).allSatisfy { $0.0 == $0.1 }
   }
 
   // MARK: - Invariants

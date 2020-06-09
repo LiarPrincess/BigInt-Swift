@@ -5,28 +5,6 @@ import XCTest
 
 private typealias Word = BigIntStorage.Word
 
-// MARK: - Init helper
-
-extension BigIntStorage {
-
-  fileprivate init(isNegative: Bool, words: Word...) {
-    self.init(isNegative: isNegative, words: words)
-  }
-
-  fileprivate init(isNegative: Bool, words: [Word]) {
-    assert(!words.isEmpty, "Use different 'init' to create zero")
-
-    self.init(minimumCapacity: words.count)
-    self.isNegative = isNegative
-
-    for word in words {
-      self.append(word)
-    }
-  }
-}
-
-// MARK: - BigIntStorageTests
-
 class BigIntStorageTests: XCTestCase {
 
   // MARK: - Memory layout
@@ -305,7 +283,7 @@ class BigIntStorageTests: XCTestCase {
 
   func test_dropFirst_lessThanCount_cow() {
     let initialWords: [Word] = [.max, 1 , .min, 7, 42]
-    var orginal = BigIntStorage(isNegative: false, words: initialWords)
+    let orginal = BigIntStorage(isNegative: false, words: initialWords)
 
     var copy = orginal
     copy.dropFirst(3)
@@ -348,21 +326,19 @@ class BigIntStorageTests: XCTestCase {
     var storage = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
     for value in self.unsignedValues {
-      print(value)
       storage.set(to: value)
       XCTAssertEqual(storage, BigIntStorage(isNegative: false, magnitude: value))
     }
   }
 
   func test_set_UInt_cow() {
-    let orginal = BigIntStorage(isNegative: true, words: 1, 2, 3)
+    let orginal = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
     for value in self.unsignedValues {
       var copy = orginal
       copy.set(to: value)
 
       XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 1, 2, 3))
-      XCTAssertEqual(copy, BigIntStorage(isNegative: false, magnitude: value))
     }
   }
 
@@ -375,7 +351,10 @@ class BigIntStorageTests: XCTestCase {
 
     for value in self.signedValues {
       storage.set(to: value)
-      XCTAssertEqual(storage, BigIntStorage(isNegative: false, magnitude: value.magnitude))
+
+      let isNegative = value.isNegative
+      let magnitude = value.magnitude
+      XCTAssertEqual(storage, BigIntStorage(isNegative: isNegative, magnitude: magnitude))
     }
   }
 
@@ -387,7 +366,6 @@ class BigIntStorageTests: XCTestCase {
       copy.set(to: value)
 
       XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 1, 2, 3))
-      XCTAssertEqual(copy, BigIntStorage(isNegative: false, magnitude: value.magnitude))
     }
   }
 
@@ -407,7 +385,6 @@ class BigIntStorageTests: XCTestCase {
     copy.transformEveryWord { $0 + 1 }
 
     XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: 1, 2, 3))
-    XCTAssertEqual(copy, BigIntStorage(isNegative: false, words: 2, 3, 4))
   }
 
   // MARK: - Description
