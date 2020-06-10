@@ -6,8 +6,6 @@ private typealias Word = BigIntStorage.Word
 private let smiZero = Smi.Storage.zero
 private let smiMax = Smi.Storage.max
 private let smiMaxAsWord = Word(smiMax.magnitude)
-private let smiMin = Smi.Storage.min // negative
-private let smiMinAsWord = Word(smiMin.magnitude) // positive!
 
 class BigIntHeapAddTests: XCTestCase {
 
@@ -74,9 +72,8 @@ class BigIntHeapAddTests: XCTestCase {
 
   /// -(Word.max - smiMaxAsWord) + (-smiMax) = -Word.max
   func test_smi_bothNegative_sameWord() {
-    // 'smiMin' is negative, 'smiMinAsWord' is positive!
-    var value = BigIntHeap(isNegative: true, words: Word.max - smiMinAsWord)
-    value.add(other: smiMin)
+    var value = BigIntHeap(isNegative: true, words: Word.max - smiMaxAsWord)
+    value.add(other: -smiMax)
 
     let expected = BigIntHeap(isNegative: true, words: Word.max)
     XCTAssertEqual(value, expected)
@@ -84,12 +81,11 @@ class BigIntHeapAddTests: XCTestCase {
 
   /// -Word.max + (-smiMax) = well... a lot
   func test_smi_bothNegative_newWord() {
-    // 'smiMin' is negative, 'smiMinAsWord' is positive!
     var value = BigIntHeap(isNegative: true, words: Word.max)
-    value.add(other: smiMin)
+    value.add(other: -smiMax)
 
     // Why '-1'? 99 + 5 = 104, not 105!
-    let expected = BigIntHeap(isNegative: true, words: smiMinAsWord - 1, 1)
+    let expected = BigIntHeap(isNegative: true, words: smiMaxAsWord - 1, 1)
     XCTAssertEqual(value, expected)
   }
 
