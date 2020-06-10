@@ -1,25 +1,19 @@
 import XCTest
 @testable import Core
 
-private typealias Word = BigIntStorage.Word
-
-private let smiZero = Smi.Storage.zero
-private let smiMax = Smi.Storage.max
-private let smiMin = Smi.Storage.min
-
 class BigIntHeapEquatableTests: XCTestCase {
 
   // MARK: - Smi
 
   func test_smi_equal() {
-    for smi in self.generateSmiValues(countButNotReally: 100) {
+    for smi in generateSmiValues(countButNotReally: 100) {
       let heap = BigIntHeap(smi)
       XCTAssertTrue(heap == smi, "\(smi)")
     }
   }
 
   func test_smi_notEqual() {
-    let values = self.generateSmiValues(countButNotReally: 20)
+    let values = generateSmiValues(countButNotReally: 20)
 
     for (lhs, rhs) in allPossiblePairings(values: values) {
       if lhs == rhs {
@@ -35,8 +29,8 @@ class BigIntHeapEquatableTests: XCTestCase {
   }
 
   func test_smi_moreThan1Word() {
-    for smi in self.generateSmiValues(countButNotReally: 10) {
-      for p in self.generateHeapValues(countButNotReally: 10) {
+    for smi in generateSmiValues(countButNotReally: 10) {
+      for p in generateHeapValues(countButNotReally: 10) {
         guard p.words.count > 1 else {
           continue
         }
@@ -47,35 +41,10 @@ class BigIntHeapEquatableTests: XCTestCase {
     }
   }
 
-  /// We will return `2 * countButNotReally + 5` values (don't ask).
-  private func generateSmiValues(countButNotReally: Int) -> [Smi.Storage] {
-    var result = [Smi.Storage]()
-    result.append(0)
-    result.append(-1)
-    result.append(1)
-    result.append(.min)
-    result.append(.max)
-
-    let smiSpan = 2 * Int(smiMax) + 1
-    let step = smiSpan / countButNotReally
-
-    for i in 0..<countButNotReally {
-      let s = i * step
-
-      let fromMax = Smi.Storage(Int(smiMax) - s)
-      result.append(fromMax)
-
-      let fromMin = Smi.Storage(Int(smiMin) + s)
-      result.append(fromMin)
-    }
-
-    return result
-  }
-
   // MARK: - Heap
 
   func test_heap_equal() {
-    for p in self.generateHeapValues(countButNotReally: 100) {
+    for p in generateHeapValues(countButNotReally: 100) {
       let lhs = p.create()
       let rhs = p.create()
       XCTAssertEqual(lhs, rhs, "\(lhs)")
@@ -83,7 +52,7 @@ class BigIntHeapEquatableTests: XCTestCase {
   }
 
   func test_heap_differentSign() {
-    for p in self.generateHeapValues(countButNotReally: 100) {
+    for p in generateHeapValues(countButNotReally: 100) {
       // '0' is always positive
       if p.isZero {
         continue
@@ -96,7 +65,7 @@ class BigIntHeapEquatableTests: XCTestCase {
   }
 
   func test_heap_differentWords() {
-    for p in self.generateHeapValues(countButNotReally: 20) {
+    for p in generateHeapValues(countButNotReally: 20) {
       // '0' as no words
       if p.isZero {
         continue
@@ -123,7 +92,7 @@ class BigIntHeapEquatableTests: XCTestCase {
   }
 
   func test_heap_wordCount() {
-    for p in self.generateHeapValues(countButNotReally: 20) {
+    for p in generateHeapValues(countButNotReally: 20) {
       let orginal = p.create()
 
       let moreWords = BigIntHeap(isNegative: p.isNegative, words: p.words + [42])
@@ -135,48 +104,5 @@ class BigIntHeapEquatableTests: XCTestCase {
         XCTAssertNotEqual(orginal, lessWords, "\(orginal)")
       }
     }
-  }
-
-  private struct HeapPrototype {
-
-    fileprivate let isNegative: Bool
-    fileprivate let words: [Word]
-
-    fileprivate var isZero: Bool {
-      return self.words.isEmpty
-    }
-
-    fileprivate func create() -> BigIntHeap {
-      return BigIntHeap(isNegative: self.isNegative, words: self.words)
-    }
-  }
-
-  /// We will return `2 * countButNotReally + 5` values (don't ask).
-  private func generateHeapValues(countButNotReally: Int) -> [HeapPrototype] {
-    var result = [HeapPrototype]()
-    result.append(HeapPrototype(isNegative: false, words: []))  //  0
-    result.append(HeapPrototype(isNegative: false, words: [1])) //  1
-    result.append(HeapPrototype(isNegative: true,  words: [1])) // -1
-    result.append(HeapPrototype(isNegative: false, words: [.max])) //  Word.max
-    result.append(HeapPrototype(isNegative: true,  words: [.max])) // -Word.max
-
-    var word = Word(2) // Start from '2' and go up
-    let maxWordCount = 3
-
-    for i in 0..<countButNotReally {
-      let atLeast1Word = 1
-      let wordCount = i / maxWordCount + atLeast1Word
-
-      var words = [Word]()
-      for _ in 0..<wordCount {
-        words.append(word)
-        word += 1
-      }
-
-      result.append(HeapPrototype(isNegative: false, words: words))
-      result.append(HeapPrototype(isNegative: true, words: words))
-    }
-
-    return result
   }
 }

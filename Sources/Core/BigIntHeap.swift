@@ -14,7 +14,7 @@ internal struct BigIntNew {
   }
 }
 
-internal struct BigIntHeap: Equatable {
+internal struct BigIntHeap: Equatable, Hashable {
 
   internal typealias Word = BigIntStorage.Word
 
@@ -90,17 +90,23 @@ internal struct BigIntHeap: Equatable {
   // MARK: - Type conversion
 
   internal func asSmiIfPossible() -> Smi? {
+    if self.isZero {
+      return Smi(Smi.Storage.zero)
+    }
+
+    // If we have more than 1 word then we are out of range
     guard self.storage.count == 1 else {
       return nil
     }
 
     let word = self.storage[0]
+
     if self.isPositive {
       return Smi(word)
     }
 
-    let max = Word(Smi.Storage.min.magnitude)
-    if word > max {
+    let max = Smi.Storage.min.magnitude
+    guard word <= max else {
       return nil
     }
 

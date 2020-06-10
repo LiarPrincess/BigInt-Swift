@@ -2,7 +2,7 @@
 // swiftlint:disable file_length
 
 /// Small integer, named after similiar type in `V8`.
-internal struct Smi: CustomStringConvertible, CustomDebugStringConvertible {
+internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvertible {
 
   internal typealias Storage = Int32
   internal typealias Words = Storage.Words
