@@ -61,8 +61,13 @@ extension BigIntHeap {
   }
 
   internal struct DivWordRemainder {
+
     internal let isNegative: Bool
     internal let magnitude: Word
+
+    internal var isPositive: Bool {
+      return !self.isNegative
+    }
 
     fileprivate static var zero: DivWordRemainder {
       return DivWordRemainder(isNegative: false, magnitude: 0)
