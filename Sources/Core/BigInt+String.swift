@@ -8,15 +8,13 @@ extension String {
   public init(_ value: BigInt, radix: Int = 10, uppercase: Bool = false) {
     self = value.toString(radix: radix, uppercase: uppercase)
   }
-
-  // TODO: BigIntHeap.toString
 }
 
 // MARK: - Init
 
 extension BigInt {
 
-  private typealias Word = BigIntHeap.Word
+  internal typealias Word = BigIntHeap.Word
 
   public enum ParsingError: Error {
     /// String is empty
@@ -37,13 +35,12 @@ extension BigInt {
   ) throws {
     precondition(2 <= radix && radix <= 36, "Radix not in range 2...36.")
 
-    let radix = Word(radix)
-    var scalars = scalars
-
     // This will also handle empty string
     guard let first = scalars.first else {
       throw ParsingError.emptyString
     }
+
+    var scalars = scalars
 
     var isNegative = false
     if first == "+" {
@@ -64,6 +61,7 @@ extension BigInt {
     // and then we switch to slow BigInt for a few final operations.
 
     let (scalarCountPerGroup, power) = Self.scalarsPerWord(radix: radix)
+    let radix = Word(radix)
 
     // 'groups' are in right-to-left order!
     let groups = try Self.parseGroups(
@@ -74,6 +72,7 @@ extension BigInt {
 
     // TODO: Fast path for 'Smi' (without allocation)
     // groups.fixInvariants()
+    // Remember sign!
 
     var result = BigIntHeap(minimumStorageCapacity: groups.count)
     result.storage.isNegative = isNegative
@@ -92,21 +91,24 @@ extension BigInt {
   /// (for a given `radix`).
   ///
   /// Returns the highest number that satisfy `radix^count <= 2^Word.bitWidth`
-  private static func scalarsPerWord(radix: Word) -> (count: Int, power: Word) {
+  ///
+  /// `charsPerWord` in `attaswift/BigInt`.
+  internal static func scalarsPerWord(radix: Int) -> (count: Int, power: Word) {
     var power: Word = 1
+    var overflow = false
     var count = 0
 
-    while true {
-      let (value, overflow) = power.multipliedReportingOverflow(by: Word(radix))
-      if overflow {
-        return (count, power)
+    while !overflow {
+      let (p, o) = power.multipliedReportingOverflow(by: Word(radix))
+      overflow = o
+
+      if !o || p == 0 {
+        count += 1
+        power = p
       }
-
-      // TODO: Use radix of 2 to check the 'if !o || p == 0 {' from atta.BigInt
-
-      count += 1
-      power = value
     }
+
+    return (count, power)
   }
 
   /// Returns groups in right-to-left order!
