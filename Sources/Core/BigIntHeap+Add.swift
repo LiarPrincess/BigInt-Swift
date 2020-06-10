@@ -13,7 +13,7 @@ extension BigIntHeap {
     let word = Word(other.magnitude)
 
     if self.isZero {
-      self.storage.append(word)
+      self.storage.set(to: Int(other))
       return
     }
 
