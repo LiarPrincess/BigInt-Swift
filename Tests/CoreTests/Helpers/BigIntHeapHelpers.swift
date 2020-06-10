@@ -23,7 +23,10 @@ extension BigIntStorage {
   }
 
   internal init(isNegative: Bool, words: [Word]) {
-    assert(!words.isEmpty, "Use different 'init' to create zero")
+    if words.isEmpty {
+      self = BigIntStorage.zero
+      return
+    }
 
     self.init(minimumCapacity: words.count)
     self.isNegative = isNegative

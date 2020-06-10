@@ -17,14 +17,14 @@ extension BigIntHeap {
 
   // MARK: - Equatable
 
-  internal static func == (heap: BigIntHeap, smi: Smi) -> Bool {
+  internal static func == (heap: BigIntHeap, smi: Smi.Storage) -> Bool {
     // Different signs are never equal
     guard heap.isNegative == smi.isNegative else {
       return false
     }
 
     let lhs = heap.storage
-    let rhs = Word(smi.value.magnitude)
+    let rhs = Word(smi.magnitude)
     switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
     case .equal:
       return true
@@ -99,16 +99,14 @@ extension BigIntHeap {
 
   internal static func compareMagnitudes(lhs: BigIntStorage,
                                          rhs: Word) -> CompareMagnitudes {
-    // If we have more words than 1 then we are our of range of smi
+    // If we have more than 1 word then we are out of range
     if lhs.count > 1 {
       return .greater
     }
 
-    // We have only 1 word in heap -> compare with value
-    let lhsWord = lhs[0]
-    let rhsWord = Word(rhs.magnitude)
-    return lhsWord == rhsWord ? .equal :
-           lhsWord > rhsWord ? .greater :
+    let lhsWord = lhs.first ?? 0 // No words -> it is '0'
+    return lhsWord == rhs ? .equal :
+           lhsWord > rhs ? .greater :
           .less
   }
 
