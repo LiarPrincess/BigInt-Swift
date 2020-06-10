@@ -1,78 +1,111 @@
 // swiftlint:disable function_body_length
 
-/// Sign:
-/// - sign of the result follows standard math rules:
-///   if the operands had the same sign then positive, otherwise negative
-/// - sign of the remainder is the same `self` sign
-///
-/// Based on following Swift code:
-/// ```
-/// let x = 10
-/// let y = 3
-///
-/// print(" \(x) /  \(y) =", x / y, "rem:", x % y)             //  10 /  3 =  3 rem: 1
-/// print(" \(x) / -\(y) =", x / (-y), "rem:", x % (-y))       //  10 / -3 = -3 rem: 1
-/// print("-\(x) /  \(y) =", (-x) / y, "rem:", (-x) % y)       // -10 /  3 = -3 rem: -1
-/// print("-\(x) / -\(y) =", (-x) / (-y), "rem:", (-x) % (-y)) // -10 / -3 =  3 rem: -1
-/// ```
-///
-/// - Important:
-/// In Python sign acts a bit differently
-
 extension BigIntHeap {
 
-  private static var zero: BigIntHeap {
-    return BigIntHeap()
+  // MARK: - Sign
+
+  // - sign of the result follows standard math rules:
+  //   if the operands had the same sign then positive, otherwise negative
+  // - sign of the remainder is the same `self` sign
+  //
+  // Based on following Swift code:
+  // ```
+  // let x = 10
+  // let y = 3
+  //
+  // print(" \(x) /  \(y) =",   x  /   y,  "rem",   x  %   y)  //  10 /  3 =  3 rem  1
+  // print(" \(x) / -\(y) =",   x  / (-y), "rem",   x  % (-y)) //  10 / -3 = -3 rem  1
+  // print("-\(x) /  \(y) =", (-x) /   y,  "rem", (-x) %   y)  // -10 /  3 = -3 rem -1
+  // print("-\(x) / -\(y) =", (-x) / (-y), "rem", (-x) % (-y)) // -10 / -3 =  3 rem -1
+  // ```
+  //
+  // In Python remainder sign acts a bit differently.
+
+  /// If the signs are the same then result is positive:
+  /// `2/1 = 2` and also `(-2)*(-1) = 2`
+  private func divIsNegative(otherIsNegative: Bool) -> Bool {
+    return self.isNegative != otherIsNegative
+  }
+
+  /// Remainder will have the same sign as we have now.
+  private func modIsNegative(otherIsNegative: Bool) -> Bool {
+    return self.isNegative
   }
 
   // MARK: - Smi
 
   /// Returns remainder.
-  internal mutating func div(other: Smi.Storage) -> BigIntHeap {
+  internal mutating func div(other: Smi.Storage) -> Smi.Storage {
     defer { self.checkInvariants() }
-
-    // Special case: other is '0', '1' or '-1'
-    precondition(!other.isZero, "Division by zero")
-
-    if other == 1 {
-      return .zero // x / 1 = x
-    }
 
     if other == -1 {
       self.negate() // x / (-1) = -x
       return .zero
     }
 
-    // Special case: '0' divided by anything is '0'
-    if self.isZero {
-      return .zero
-    }
-
-    // If the signs are the same then result is positive.
-    // '2 / 1 = 2' and also (-2) * (-1) = 2
-    // Remainder will have the same sign as we have now.
-    let resultIsNegative = self.isNegative != other.isNegative
-    let remainderIsNegative = self.isNegative
+    let resultIsNegative = self.divIsNegative(otherIsNegative: other.isNegative)
+    let remainderIsNegative = self.modIsNegative(otherIsNegative: other.isNegative)
 
     let word = Word(other.magnitude)
-    switch Self.compareMagnitudes(lhs: self.storage, rhs: word) {
+    let wordRemainder = self.div(other: word)
+
+    self.storage.isNegative = resultIsNegative
+    self.fixInvariants()
+
+    // Remainder is always less than the number we divide by.
+    // So even if we divide by min value (for example for 'Int8' it is -128),
+    // the max possible remainder (127) is still representable in given type.
+    assert(wordRemainder.isNegative == remainderIsNegative)
+    let unsignedRemainder = Smi.Storage(wordRemainder.magnitude)
+    return remainderIsNegative ? -unsignedRemainder : unsignedRemainder
+  }
+
+  internal struct DivWordRemainder {
+    internal let isNegative: Bool
+    internal let magnitude: Word
+
+    fileprivate static var zero: DivWordRemainder {
+      return DivWordRemainder(isNegative: false, magnitude: 0)
+    }
+  }
+
+  // MARK: - Word
+
+  /// Returns remainder.
+  internal mutating func div(other: Word) -> DivWordRemainder {
+    defer { self.checkInvariants() }
+
+    precondition(!other.isZero, "Division by zero")
+
+    if other == 1 {
+      return .zero // x / 1 = x
+    }
+
+    if self.isZero {
+      return .zero // 0 / n = 0
+    }
+
+    let resultIsNegative = self.divIsNegative(otherIsNegative: false)
+    let remainderIsNegative = self.modIsNegative(otherIsNegative: other.isNegative)
+
+    switch Self.compareMagnitudes(lhs: self.storage, rhs: other) {
     case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
       self.storage.set(to: resultIsNegative ? -1 : 1)
       return .zero
 
     case .less: // 3 / 5 = 0 rem 3
       // Basically return 'self' as remainder
-      // We have to do a little dance to avoid COW.
-      var remainder = self
-      self = BigIntHeap()
-      remainder.storage.isNegative = remainderIsNegative
-      return remainder
+      assert(self.storage.count == 1)
+      let unsignedRemainder = self.storage[0]
+      self.storage.setToZero()
+      return DivWordRemainder(isNegative: remainderIsNegative,
+                              magnitude: unsignedRemainder)
 
     case .greater:
       let unsignedRemainder: Word = {
         // If 'smaller' is a power of 2 -> we can just shift right
-        let otherLSB = word.trailingZeroBitCount
-        let isOtherPowerOf2 = (word >> otherLSB) == 1
+        let otherLSB = other.trailingZeroBitCount
+        let isOtherPowerOf2 = (other >> otherLSB) == 1
         if isOtherPowerOf2 {
           // Remainder - part we are 'chopping' off
           // (just like in Overcooked: chop, chop, chop)
@@ -85,22 +118,25 @@ extension BigIntHeap {
         var carry = Word.zero
         for i in (0..<self.storage.count).reversed() {
           let x = (high: carry, low: self.storage[i])
-          (self.storage[i], carry) = word.dividingFullWidth(x)
+          (self.storage[i], carry) = other.dividingFullWidth(x)
         }
 
         return carry
       }()
 
-      let remainder = BigIntStorage(isNegative: remainderIsNegative,
-                                    magnitude: unsignedRemainder)
-
       self.storage.isNegative = resultIsNegative
       self.fixInvariants()
-      return BigIntHeap(storage: remainder)
+
+      return DivWordRemainder(isNegative: remainderIsNegative,
+                              magnitude: unsignedRemainder)
     }
   }
 
   // MARK: - Heap
+
+  private static var zero: BigIntHeap {
+    return BigIntHeap()
+  }
 
   /// Returns remainder.
   internal mutating func div(other: BigIntHeap) -> BigIntHeap {
@@ -124,11 +160,8 @@ extension BigIntHeap {
       return .zero
     }
 
-    // If the signs are the same then result is positive.
-    // '2 / 1 = 2' and also (-2) * (-1) = 2
-    // Remainder will have the same sign as we have now.
-    let resultIsNegative = self.isNegative != other.isNegative
-    let remainderIsNegative = self.isNegative
+    let resultIsNegative = self.divIsNegative(otherIsNegative: other.isNegative)
+    let remainderIsNegative = self.modIsNegative(otherIsNegative: other.isNegative)
 
     switch Self.compareMagnitudes(lhs: self.storage, rhs: other.storage) {
     case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
@@ -140,7 +173,7 @@ extension BigIntHeap {
       // Basically return 'self' as remainder
       // We have to do a little dance to avoid COW.
       var remainder = self
-      self = BigIntHeap()
+      self.storage.setToZero()
       remainder.storage.isNegative = remainderIsNegative
       return remainder
 
