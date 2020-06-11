@@ -47,24 +47,10 @@ extension BigIntHeap {
       return heap.isNegative
     }
 
-    // If we have more than 1 word then we are out of range of smi
-    if heap.storage.count > 1 {
-      // We have the same sign:
-      // - if we are 'positive' then more words -> greater number
-      // - if we are 'negative' then more words -> smaller number
-      return heap.isNegative
-    }
-
-    // If we do not have any words then we are '0'
-    let heapMagnitude = heap.storage.first ?? 0
-    let smiMagnitude = smi.magnitude
-
-    // We have the same sign:
-    // - if we are 'positive' then bigger magnitude -> greater number
-    // - if we are 'negative' then bigger magnitude -> smaller number
-    return smi.isPositive ?
-      heapMagnitude < smiMagnitude :
-      heapMagnitude > smiMagnitude
+    // We have the same sign, now we will be comparing magnitudes.
+    let smiMagnitude = Word(smi.magnitude)
+    let compareResult = heap.compareMagnitude(with: smiMagnitude)
+    return compareResult.asLessOperatorResult(isNegative: heap.isNegative)
   }
 
   internal static func < (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
@@ -73,37 +59,45 @@ extension BigIntHeap {
       return lhs.isNegative
     }
 
-    // Shorter number is always smaller
-    guard lhs.storage.count == rhs.storage.count else {
-      return lhs.storage.count < rhs.storage.count
-    }
-
-    // Compare from most significant word
-    for (lhsWord, rhsWord) in zip(lhs.storage, rhs.storage).reversed() {
-      if lhsWord < rhsWord {
-        return true
-      }
-
-      if lhsWord > rhsWord {
-        return false
-      }
-
-      // Equal -> compare next word
-    }
-
-    // Numbers are equal
-    return false
+    // We have the same sign, now we will be comparing magnitudes.
+    let compareResult = lhs.compareMagnitude(with: rhs)
+    return compareResult.asLessOperatorResult(isNegative: lhs.isNegative)
   }
 
   // MARK: - Compare magnitudes
 
-  internal enum CompareResult {
+  internal enum CompareMagnitudeResult {
     case equal
     case less
     case greater
+
+    fileprivate func asLessOperatorResult(isNegative: Bool) -> Bool {
+      // This is very mind-bending (tbh. the whole 'math' is).
+      //
+      // Here is a diagram:
+      // --------------------------------- 0 --------------------------------->
+      // big magnitude                    zero                    big magnitude
+      //
+      // Soo... if we are positive:
+      // - bigger magnitude  -> bigger number (further away from '0')
+      // - smaller magnitude -> smaller number (closer to '0')
+      //
+      // If we are negative:
+      // - bigger  magnitude -> smaller number (further away from '0')
+      // - smaller magnitude -> bigger number (closer to '0')
+
+      switch self {
+      case .equal:
+        return false
+      case .less:
+        return !isNegative
+      case .greater:
+        return isNegative
+      }
+    }
   }
 
-  internal func compareMagnitude(with other: Word) -> CompareResult {
+  internal func compareMagnitude(with other: Word) -> CompareMagnitudeResult {
     // If we have more than 1 word then we are out of range of 'Word'
     if self.storage.count > 1 {
       return .greater
@@ -116,11 +110,11 @@ extension BigIntHeap {
           .less
   }
 
-  internal func compareMagnitude(with other: BigIntHeap) -> CompareResult {
+  internal func compareMagnitude(with other: BigIntHeap) -> CompareMagnitudeResult {
     return self.compareMagnitude(with: other.storage)
   }
 
-  internal func compareMagnitude(with other: BigIntStorage) -> CompareResult {
+  internal func compareMagnitude(with other: BigIntStorage) -> CompareMagnitudeResult {
     // Shorter number is always smaller
     guard self.storage.count == other.count else {
       return self.storage.count < other.count ? .less : .greater

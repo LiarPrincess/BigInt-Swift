@@ -44,6 +44,10 @@ internal struct HeapPrototype {
     return self.words.isEmpty
   }
 
+  internal var isPositive: Bool {
+    return !self.isNegative
+  }
+
   internal func create() -> BigIntHeap {
     return BigIntHeap(isNegative: self.isNegative, words: self.words)
   }

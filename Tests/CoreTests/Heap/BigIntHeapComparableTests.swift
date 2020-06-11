@@ -1,9 +1,11 @@
 import XCTest
 @testable import Core
 
+private typealias Word = BigIntStorage.Word
+
 class BigIntHeapComparableTests: XCTestCase {
 
-  // MARK: - Smi
+  // MARK: - Smi - different sign
 
   func test_smi_differentSign_negativeIsAlwaysLess() {
     for negativeRaw in generateSmiValues(countButNotReally: 10) {
@@ -29,6 +31,8 @@ class BigIntHeapComparableTests: XCTestCase {
       }
     }
   }
+
+  // MARK: - Smi - same sign - 1 word
 
   func test_smi_sameSign_equalMagnitude_isNotLess() {
     for smi in generateSmiValues(countButNotReally: 100) {
@@ -63,19 +67,18 @@ class BigIntHeapComparableTests: XCTestCase {
     }
   }
 
+  // MARK: - Smi - same sign - more words
+
   func test_smi_sameSign_moreThan1Word() {
     for smi in generateSmiValues(countButNotReally: 10) {
-      for heapPrototype in generateHeapValues(countButNotReally: 10) {
+      for p in generateHeapValues(countButNotReally: 10) {
         // We need more words
-        guard heapPrototype.words.count > 1 else {
+        guard p.words.count > 1 else {
           continue
         }
 
-        // We need the same sign
-        var heap = heapPrototype.create()
-        if smi.isNegative != heap.isNegative {
-          heap.negate()
-        }
+        // We need the same sign as 'smi'
+        let heap = BigIntHeap(isNegative: smi.isNegative, words: p.words)
 
         // positive - more words -> bigger number
         // negative - more words -> smaller number
@@ -84,6 +87,73 @@ class BigIntHeapComparableTests: XCTestCase {
         } else {
           XCTAssertTrue(heap < smi, "\(heap) < \(smi)")
         }
+      }
+    }
+  }
+
+  // MARK: - Heap - different sign
+
+  func test_heap_differentSign_negativeIsAlwaysLess() {
+    for negativeRaw in generateHeapValues(countButNotReally: 10) {
+      // '0' stays the same after negation
+      if negativeRaw.isZero {
+        continue
+      }
+
+      let negative = BigIntHeap(isNegative: true, words: negativeRaw.words)
+
+      for positiveRaw in generateHeapValues(countButNotReally: 10) {
+        let positive = BigIntHeap(isNegative: false, words: positiveRaw.words)
+        XCTAssertTrue(negative < positive, "\(negative) < \(positive)")
+      }
+    }
+  }
+
+  // MARK: - Heap - same sign - equal word count
+
+  func test_heap_sameSign_equalMagnitude_isNeverLess() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      let lhs = p.create()
+      let rhs = p.create()
+      XCTAssertFalse(lhs < rhs, "\(lhs) < \(rhs)")
+    }
+  }
+
+  func test_heap_sameSign_smallerMagnitude_isLess() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      let value = p.create()
+      var minus1 = value
+      minus1.sub(other: Smi.Storage(1))
+
+      XCTAssertTrue(minus1 < value, "\(minus1) < \(value)")
+    }
+  }
+
+  func test_heap_sameSign_greaterMagnitude_isNeverLess() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      let value = p.create()
+      var plus1 = value
+      plus1.add(other: Smi.Storage(1))
+
+      XCTAssertFalse(plus1 < value, "\(plus1) < \(value)")
+    }
+  }
+
+  // MARK: - Heap - same sign - different word count
+
+  func test_heap_sameSign_moreWords() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      let value = BigIntHeap(isNegative: p.isNegative, words: p.words)
+      let moreWords = BigIntHeap(isNegative: p.isNegative, words: p.words + [42])
+
+      // positive - more words -> bigger number
+      // negative - more words -> smaller number
+      if p.isPositive {
+        XCTAssertTrue(value < moreWords, "\(value) < \(moreWords)")
+        XCTAssertFalse(moreWords < value, "\(moreWords) < \(value)")
+      } else {
+        XCTAssertFalse(value < moreWords, "\(value) < \(moreWords)")
+        XCTAssertTrue(moreWords < value, "\(moreWords) < \(value)")
       }
     }
   }
