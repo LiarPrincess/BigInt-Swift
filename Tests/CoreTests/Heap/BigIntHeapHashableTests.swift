@@ -4,7 +4,7 @@ import XCTest
 class BigIntHeapHashableTests: XCTestCase {
 
   // We need to hash to the same value as 'Smi'
-  func test_smi() {
+  func test_smiRepresentable_hasTheSameHash_asSmi() {
     for value in generateSmiValues(countButNotReally: 100) {
       let smi = Smi(value)
       let heap = BigIntHeap(value)
@@ -12,7 +12,7 @@ class BigIntHeapHashableTests: XCTestCase {
     }
   }
 
-  func test_outsideOfSmi() {
+  func test_notSmi_doesNotTrap_etc() {
     for p in generateHeapValues(countButNotReally: 100) {
       let heap = p.create()
 

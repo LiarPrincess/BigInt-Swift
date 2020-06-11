@@ -28,7 +28,7 @@ class BigIntHeapEquatableTests: XCTestCase {
     }
   }
 
-  func test_smi_moreThan1Word() {
+  func test_smi_moreThan1Word_isNeverEqual() {
     for smi in generateSmiValues(countButNotReally: 10) {
       for p in generateHeapValues(countButNotReally: 10) {
         guard p.words.count > 1 else {
@@ -51,7 +51,7 @@ class BigIntHeapEquatableTests: XCTestCase {
     }
   }
 
-  func test_heap_differentSign() {
+  func test_heap_withDifferentSign_isNeverEqual() {
     for p in generateHeapValues(countButNotReally: 100) {
       // '0' is always positive
       if p.isZero {
@@ -64,7 +64,7 @@ class BigIntHeapEquatableTests: XCTestCase {
     }
   }
 
-  func test_heap_differentWords() {
+  func test_heap_withDifferentWords_isNeverEqual() {
     for p in generateHeapValues(countButNotReally: 20) {
       // '0' as no words
       if p.isZero {
@@ -91,7 +91,7 @@ class BigIntHeapEquatableTests: XCTestCase {
     }
   }
 
-  func test_heap_wordCount() {
+  func test_heap_withDifferentWordCount_isNeverEqual() {
     for p in generateHeapValues(countButNotReally: 20) {
       let orginal = p.create()
 

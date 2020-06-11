@@ -23,15 +23,16 @@ extension BigIntHeap {
       return false
     }
 
-    let lhs = heap.storage
-    let rhs = Word(smi.magnitude)
-    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
-    case .equal:
-      return true
-    case .less,
-         .greater:
+    // If we have more than 1 word then we are out of range of smi
+    if heap.storage.count > 1 {
       return false
     }
+
+    // We have the same sign. Do we have the same magnitude?
+    // If we do not have any words then we are '0'
+    let heapMagnitude = heap.storage.first ?? 0
+    let smiMagnitude = smi.magnitude
+    return heapMagnitude == smiMagnitude
   }
 
   internal static func == (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
@@ -40,38 +41,30 @@ extension BigIntHeap {
 
   // MARK: - Comparable
 
-  internal static func >= (heap: BigIntHeap, smi: Smi) -> Bool {
-    // Negative values are always smaller than positive ones (because math...)
-    guard heap.isNegative == smi.isNegative else {
-      return smi.isNegative
-    }
-
-    let lhs = heap.storage
-    let rhs = Word(smi.value.magnitude)
-    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
-    case .equal,
-         .greater:
-      return true
-    case .less:
-      return false
-    }
-  }
-
-  internal static func < (heap: BigIntHeap, smi: Smi) -> Bool {
+  internal static func < (heap: BigIntHeap, smi: Smi.Storage) -> Bool {
     // Negative values are always smaller than positive ones (because math...)
     guard heap.isNegative == smi.isNegative else {
       return heap.isNegative
     }
 
-    let lhs = heap.storage
-    let rhs = Word(smi.value.magnitude)
-    switch Self.compareMagnitudes(lhs: lhs, rhs: rhs) {
-    case .less:
-      return true
-    case .equal,
-         .greater:
-      return false
+    // If we have more than 1 word then we are out of range of smi
+    if heap.storage.count > 1 {
+      // We have the same sign:
+      // - if we are 'positive' then more words -> greater number
+      // - if we are 'negative' then more words -> smaller number
+      return heap.isNegative
     }
+
+    // If we do not have any words then we are '0'
+    let heapMagnitude = heap.storage.first ?? 0
+    let smiMagnitude = smi.magnitude
+
+    // We have the same sign:
+    // - if we are 'positive' then bigger magnitude -> greater number
+    // - if we are 'negative' then bigger magnitude -> smaller number
+    return smi.isPositive ?
+      heapMagnitude < smiMagnitude :
+      heapMagnitude > smiMagnitude
   }
 
   internal static func < (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
@@ -80,50 +73,66 @@ extension BigIntHeap {
       return lhs.isNegative
     }
 
-    switch Self.compareMagnitudes(lhs: lhs.storage, rhs: rhs.storage) {
-    case .less:
-      return true
-    case .equal,
-         .greater:
-      return false
+    // Shorter number is always smaller
+    guard lhs.storage.count == rhs.storage.count else {
+      return lhs.storage.count < rhs.storage.count
     }
+
+    // Compare from most significant word
+    for (lhsWord, rhsWord) in zip(lhs.storage, rhs.storage).reversed() {
+      if lhsWord < rhsWord {
+        return true
+      }
+
+      if lhsWord > rhsWord {
+        return false
+      }
+
+      // Equal -> compare next word
+    }
+
+    // Numbers are equal
+    return false
   }
 
   // MARK: - Compare magnitudes
 
-  internal enum CompareMagnitudes {
+  internal enum CompareResult {
     case equal
     case less
     case greater
   }
 
-  internal static func compareMagnitudes(lhs: BigIntStorage,
-                                         rhs: Word) -> CompareMagnitudes {
-    // If we have more than 1 word then we are out of range
-    if lhs.count > 1 {
+  internal func compareMagnitude(with other: Word) -> CompareResult {
+    // If we have more than 1 word then we are out of range of 'Word'
+    if self.storage.count > 1 {
       return .greater
     }
 
-    let lhsWord = lhs.first ?? 0 // No words -> it is '0'
-    return lhsWord == rhs ? .equal :
-           lhsWord > rhs ? .greater :
+    // If we do not have any words then we are '0'
+    let selfWord = self.storage.first ?? 0
+    return selfWord == other ? .equal :
+           selfWord > other ? .greater :
           .less
   }
 
-  internal static func compareMagnitudes(lhs: BigIntStorage,
-                                         rhs: BigIntStorage) -> CompareMagnitudes {
+  internal func compareMagnitude(with other: BigIntHeap) -> CompareResult {
+    return self.compareMagnitude(with: other.storage)
+  }
+
+  internal func compareMagnitude(with other: BigIntStorage) -> CompareResult {
     // Shorter number is always smaller
-    guard lhs.count == rhs.count else {
-      return lhs.count < rhs.count ? .less : .greater
+    guard self.storage.count == other.count else {
+      return self.storage.count < other.count ? .less : .greater
     }
 
     // Compare from most significant word
-    for (lhsWord, rhsWord) in zip(lhs, rhs).reversed() {
-      if lhsWord < rhsWord {
+    for (selfWord, otherWord) in zip(self.storage, other).reversed() {
+      if selfWord < otherWord {
         return .less
       }
 
-      if lhsWord > rhsWord {
+      if selfWord > otherWord {
         return .greater
       }
 

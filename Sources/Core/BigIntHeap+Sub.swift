@@ -46,7 +46,7 @@ extension BigIntHeap {
   /// Case when we have the same sign, for example '1 - 1' or '-2 - (-3)'.
   /// That means that we may need to cross 0.
   private mutating func subSameSign(other: Word) {
-    switch Self.compareMagnitudes(lhs: self.storage, rhs: other) {
+    switch self.compareMagnitude(with: other) {
     case .equal: // 1 - 1
       self.storage.setToZero()
 
@@ -107,7 +107,7 @@ extension BigIntHeap {
 
     // Both have the same sign, for example '1 - 1' or '-2 - (-3)'.
     // That means that we may need to cross 0.
-    switch Self.compareMagnitudes(lhs: self.storage, rhs: other.storage) {
+    switch self.compareMagnitude(with: other) {
     case .equal: // 1 - 1
       self.storage.setToZero()
 

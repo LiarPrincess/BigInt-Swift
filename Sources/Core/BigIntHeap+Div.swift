@@ -93,7 +93,7 @@ extension BigIntHeap {
     let resultIsNegative = self.divIsNegative(otherIsNegative: false)
     let remainderIsNegative = self.modIsNegative(otherIsNegative: other.isNegative)
 
-    switch Self.compareMagnitudes(lhs: self.storage, rhs: other) {
+    switch self.compareMagnitude(with: other) {
     case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
       self.storage.set(to: resultIsNegative ? -1 : 1)
       return .zero
@@ -168,7 +168,7 @@ extension BigIntHeap {
     let resultIsNegative = self.divIsNegative(otherIsNegative: other.isNegative)
     let remainderIsNegative = self.modIsNegative(otherIsNegative: other.isNegative)
 
-    switch Self.compareMagnitudes(lhs: self.storage, rhs: other.storage) {
+    switch self.compareMagnitude(with: other) {
     case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
       let value = self.storage.isNegative ? -1 : 1
       self.storage.set(to: value)
@@ -196,7 +196,7 @@ extension BigIntHeap {
       quotientTmp.shiftLeft(count: Smi.Storage(n))
 
       for _ in (0...n).reversed() {
-        switch Self.compareMagnitudes(lhs: selfCopy.storage, rhs: otherCopy.storage) {
+        switch selfCopy.compareMagnitude(with: otherCopy) {
         case .greater:
           selfCopy.sub(other: otherCopy)
           quotient.add(other: quotientTmp)
