@@ -2,17 +2,21 @@ import Foundation
 
 // swiftlint:disable file_length
 
-/// Basically a collection that represents `BigInt` on the heap.
+/// Basically a `Word` collection with a sign.
+///
 /// Least significant word is at index `0`.
-///
-/// This is only 'storage', it does not have any 'BigInt' related logic.
-///
 /// It has no trailing zero elements.
 /// If `self.isZero`, then `isNegative == false` and `self.isEmpty == true`.
 ///
-/// - Important:
+/// This is only 'storage', it does not have any 'BigInt' related logic.
+///
+/// # Important 1
 /// All of the mutating functions have to call
 /// `guaranteeUniqueBufferReference` first.
+///
+/// # Important 2
+/// We do not give any guarantes about the words after `self.count`.
+/// They may be `0` or they may be garbage.
 internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringConvertible {
 
   // MARK: - Helper types
@@ -173,6 +177,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
   }
 
+  /// IMPORTANT: Created buffer will contain uninitialized memory!
   private static func createBuffer(header: Header,
                                    minimumCapacity: Int) -> Buffer {
     // swiftlint:disable:next trailing_closure
@@ -245,7 +250,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   // MARK: - Prepend
 
   /// Add given `Word`  at the start of the buffer specified number of times.
-  internal mutating func prepend(_ element: Word, repeated count: Int) {
+  internal mutating func prepend(_ element: Word, count: Int) {
     // swiftlint:disable:next empty_count
     assert(count >= 0)
 
@@ -263,7 +268,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
         let targetPtr = startPtr.advanced(by: count)
         targetPtr.assign(from: startPtr, count: self.count)
 
-        // Reset old words
+        // Set prefix words to given 'element'
         startPtr.assign(repeating: element, count: count)
       }
 
@@ -281,16 +286,14 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
     self.buffer.withUnsafeMutablePointerToElements { selfStartPtr in
       new.withUnsafeMutablePointerToElements { newStartPtr in
-        // Populate new (shifted) words
+        // Move current words at the correct (shifted) place
         let targetPtr = newStartPtr.advanced(by: count)
         targetPtr.assign(from: selfStartPtr, count: self.count)
 
-        // Set the prefix to the requested word.
-        // We don't have to do this if 'element' is '0', because the buffer
-        // is already zeroed.
-        if !element.isZero {
-          newStartPtr.assign(repeating: element, count: count)
-        }
+        // Set prefix words to given 'element'.
+        // We have to do this even if 'element = 0',
+        // because new buffer contains garbage.
+        newStartPtr.assign(repeating: element, count: count)
       }
     }
 
@@ -321,10 +324,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       // Copy 'newCount' elements to front
       let copySrcPtr = startPtr.advanced(by: k)
       startPtr.assign(from: copySrcPtr, count: newCount)
-
-      // Clean elements after 'newCount'
-      let afterCopiedElementsPtr = startPtr.advanced(by: newCount)
-      afterCopiedElementsPtr.assign(repeating: 0, count: k)
     }
 
     self.count = newCount
@@ -357,14 +356,8 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   // MARK: - Remove all
 
   private mutating func removeAll() {
-    self.guaranteeUniqueBufferReference()
-
-    // We need to clear the whole buffer,
-    // some code may depend on having '0' after 'self.count'.
-    self.buffer.withUnsafeMutablePointerToElements { startPtr in
-      startPtr.assign(repeating: 0, count: self.count)
-    }
-
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because 'self.count' will do it anyway.
     self.count = 0
   }
 
@@ -409,23 +402,18 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   internal var description: String {
     var result = "BigIntStorage("
     result.append("isNegative: \(self.isNegative), ")
-    result.append("capacity: \(self.capacity), ")
 
-    if self.count < 10 {
-      result.append("words: [")
-      for (index, word) in self.enumerated() {
-        result.append("0x")
-        result.append(String(word, radix: 2, uppercase: false))
+    result.append("words: [")
+    for (index, word) in self.enumerated() {
+      result.append("0b")
+      result.append(String(word, radix: 2, uppercase: false))
 
-        let isLast = index == self.count - 1
-        if !isLast {
-          result.append(", ")
-        }
+      let isLast = index == self.count - 1
+      if !isLast {
+        result.append(", ")
       }
-      result.append("]")
-    } else {
-      result.append("count: \(self.count)")
     }
+    result.append("]")
 
     result.append(")")
     return result
