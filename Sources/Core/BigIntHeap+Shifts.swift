@@ -22,7 +22,8 @@ extension BigIntHeap {
     let wordShift = Int(count / Word(Word.bitWidth))
     let bitShift = Int(count % Word(Word.bitWidth))
 
-    self.storage.prepend(0, repeated: wordShift)
+    let wordCountBeforeShift = self.storage.count
+    self.storage.prepend(0, count: wordShift)
 
     // If we are shifting by multiply of 'Word' than we are done.
     // For example for 4 bit word if we shift by 4, 8, 12 or 16
@@ -53,7 +54,7 @@ extension BigIntHeap {
     let lowShift = bitShift // In example: 5 % 4 = 1
     let highShift = Word.bitWidth - lowShift // In example: 4 - 1 = 3
 
-    for i in (0..<self.storage.count).reversed() {
+    for i in (0..<wordCountBeforeShift).reversed() {
       let indexAfterWordShift = i + wordShift
 
       let word = self.storage[indexAfterWordShift] // In example: [1011]
@@ -72,6 +73,10 @@ extension BigIntHeap {
 
   internal mutating func shiftLeft(count: BigIntHeap) {
     defer { self.checkInvariants() }
+
+    if count.isZero {
+      return
+    }
 
     if count.isPositive {
       guard let word = self.guaranteeSingleWord(shiftCount: count) else {
@@ -169,6 +174,10 @@ extension BigIntHeap {
   internal mutating func shiftRight(count: BigIntHeap) {
     defer { self.checkInvariants() }
 
+    if count.isZero {
+      return
+    }
+
     if count.isPositive {
       guard let word = self.guaranteeSingleWord(shiftCount: count) else {
         self.storage.setToZero()
@@ -188,7 +197,7 @@ extension BigIntHeap {
     }
   }
 
-  // MARK: - Heap -> Word count
+  // MARK: - Sane left shift
 
   private static let unreasonableLeftShiftMsg =
     "Shifting by more than \(Word.max) is not possible "

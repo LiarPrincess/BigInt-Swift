@@ -54,7 +54,12 @@ internal struct HeapPrototype {
 }
 
 /// We will return `2 * countButNotReally + 5` values (don't ask).
-internal func generateHeapValues(countButNotReally: Int) -> [HeapPrototype] {
+///
+/// We do not return `BigIntHeap` directly because in some cases
+/// (for example equality tests) you may want to create more than 1 value
+/// INDEPENDENTLY.
+internal func generateHeapValues(countButNotReally: Int,
+                                 maxWordCount: Int = 3) -> [HeapPrototype] {
   var result = [HeapPrototype]()
   result.append(HeapPrototype(isNegative: false, words: []))  //  0
   result.append(HeapPrototype(isNegative: false, words: [1])) //  1
@@ -63,8 +68,6 @@ internal func generateHeapValues(countButNotReally: Int) -> [HeapPrototype] {
   result.append(HeapPrototype(isNegative: true,  words: [.max])) // -Word.max
 
   var word = Word(2) // Start from '2' and go up
-  let maxWordCount = 3
-
   for i in 0..<countButNotReally {
     let atLeast1Word = 1
     let wordCount = (i % maxWordCount) + atLeast1Word

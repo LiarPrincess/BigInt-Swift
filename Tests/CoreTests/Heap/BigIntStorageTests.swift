@@ -190,7 +190,7 @@ class BigIntStorageTests: XCTestCase {
       "Expected to have some space left (just modify 'initialWords' to fix)"
     )
 
-    storage.prepend(42, repeated: prependCount)
+    storage.prepend(42, count: prependCount)
     XCTAssertEqual(storage.count, storage.capacity)
     XCTAssertEqual(storage.count, initialWords.count + prependCount)
 
@@ -203,7 +203,7 @@ class BigIntStorageTests: XCTestCase {
     var storage = BigIntStorage(isNegative: false, words: initialWords)
 
     let prependCount = storage.capacity // This will force allocation
-    storage.prepend(42, repeated: prependCount)
+    storage.prepend(42, count: prependCount)
     XCTAssertEqual(storage.count, initialWords.count + prependCount)
 
     let finalWords = [Word](repeating: 42, count: prependCount) + initialWords
@@ -223,7 +223,7 @@ class BigIntStorageTests: XCTestCase {
     )
 
     // This should always copy the 'orginal' buffer
-    copy.prepend(42, repeated: prependCount)
+    copy.prepend(42, count: prependCount)
 
     XCTAssertEqual(orginal, BigIntStorage(isNegative: false, words: initialWords))
   }
@@ -395,7 +395,7 @@ class BigIntStorageTests: XCTestCase {
     let storage = BigIntStorage(isNegative: false, words: 1, 2, 3)
 
     let result = String(describing: storage)
-    let expected = "BigIntStorage(isNegative: false, capacity: 3, words: [0x1, 0x10, 0x11])"
+    let expected = "BigIntStorage(isNegative: false, words: [0b1, 0b10, 0b11])"
     XCTAssertEqual(result, expected)
   }
 }

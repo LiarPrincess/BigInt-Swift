@@ -84,7 +84,6 @@ class SmiPropertyTests: XCTestCase {
 
     for i in 0..<(Storage.bitWidth - 1) {
       let value = Storage(1 << i)
-      print(bin(value))
       self.trailingZeroBitCount(value, expected: i)
     }
   }
