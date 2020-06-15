@@ -2,12 +2,12 @@
 // swiftlint:disable file_length
 
 // Most of the code was taken from mini-gmp: https://gmplib.org
-// GMP function name is in comment above method name.
+// GMP function name is in the comment above method.
 //
 // The main reason why we use this version (instead of standard 2 complement)
 // is that it avoids unnecesary allocation.
 // For example: 2 complement when both numbers are negative would have to allocate
-// 2 times (1 for each of the numbers) and then anotyer one for result.
+// 2 times (1 for each of the numbers) and then another one for result.
 // GMP-mini does only 1 allocation, so that's what we prefer.
 
 // MARK: - Helper extensions
@@ -32,7 +32,7 @@ extension BigIntStorage.Word {
   /// It works this way:
   /// - if it is `0` -> stay `0`
   /// - otherwise -> `MAX - x + 1`, so in our case `MAX - 1 + 1 = MAX`
-  fileprivate var allOneIfTrueOtherwiseAllZero: BigIntStorage.Word {
+  fileprivate var allOneIfTrueOtherwiseZero: BigIntStorage.Word {
     return self.isTrue ? Self.max : Self.zero
   }
 }
@@ -87,9 +87,9 @@ extension BigIntHeap {
     var uIsNegative = u.isNegative.asWord
     var bothNegative = vIsNegative & uIsNegative
 
-    let vMask = vIsNegative.allOneIfTrueOtherwiseAllZero
-    let uMask = uIsNegative.allOneIfTrueOtherwiseAllZero
-    let bothNegativeMask = bothNegative.allOneIfTrueOtherwiseAllZero
+    let vMask = vIsNegative.allOneIfTrueOtherwiseZero
+    let uMask = uIsNegative.allOneIfTrueOtherwiseZero
+    let bothNegativeMask = bothNegative.allOneIfTrueOtherwiseZero
 
     // If the smaller input is positive, higher words don't matter.
     let resultCount = v.isPositive ? v.count : u.count
@@ -154,9 +154,9 @@ extension BigIntHeap {
     var uIsNegative = u.isNegative.asWord
     var anyNegative = vIsNegative | uIsNegative
 
-    let vMask = vIsNegative.allOneIfTrueOtherwiseAllZero
-    let uMask = uIsNegative.allOneIfTrueOtherwiseAllZero
-    let anyNegativeMask = anyNegative.allOneIfTrueOtherwiseAllZero
+    let vMask = vIsNegative.allOneIfTrueOtherwiseZero
+    let uMask = uIsNegative.allOneIfTrueOtherwiseZero
+    let anyNegativeMask = anyNegative.allOneIfTrueOtherwiseZero
 
     // If the smaller input is negative, by sign extension higher words don't matter.
     let resultCount = vMask.isTrue ? v.count : u.count
@@ -221,9 +221,9 @@ extension BigIntHeap {
     var uIsNegative = u.isNegative.asWord
     var onlyOneNegative = vIsNegative ^ uIsNegative
 
-    let vMask = vIsNegative.allOneIfTrueOtherwiseAllZero
-    let uMask = uIsNegative.allOneIfTrueOtherwiseAllZero
-    let onlyOneNegativeMask = onlyOneNegative.allOneIfTrueOtherwiseAllZero
+    let vMask = vIsNegative.allOneIfTrueOtherwiseZero
+    let uMask = uIsNegative.allOneIfTrueOtherwiseZero
+    let onlyOneNegativeMask = onlyOneNegative.allOneIfTrueOtherwiseZero
 
     let resultCount = u.count
     var result = BigIntStorage(repeating: 0, count: resultCount + Int(onlyOneNegative))
@@ -297,7 +297,8 @@ extension BigIntHeap {
     }
 
     if self.isPositive {
-      // If we start with '1' then we have to add artificial '0' in front.
+      // '1' in front indicates negative number,
+      // in such case we have to add artificial '0' in front
       // This does not happen very often.
       if let last = self.storage.last, last >> (Word.bitWidth - 1) == 1 {
         var copy = self.storage
@@ -315,6 +316,14 @@ extension BigIntHeap {
     var copy = self.storage
     copy.transformEveryWord(fn: ~) // Invert every word
     Self.addMagnitude(lhs: &copy, rhs: 1)
+
+    // '0' in front indicates positive number,
+    // in such case we have to add artificial '1' in front
+    // Again, this does not happen very often.
+    if let last = copy.last, last >> (Word.bitWidth - 1) == 0 {
+      copy.append(Word.max)
+    }
+
     return copy
   }
 }

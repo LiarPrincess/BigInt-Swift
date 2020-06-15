@@ -69,8 +69,8 @@ internal func generateHeapValues(countButNotReally: Int,
 
   var word = Word(2) // Start from '2' and go up
   for i in 0..<countButNotReally {
-    let atLeast1Word = 1
-    let wordCount = (i % maxWordCount) + atLeast1Word
+    let min1WordBecauseWeAlreadyAddedZero = 1
+    let wordCount = (i % maxWordCount) + min1WordBecauseWeAlreadyAddedZero
 
     var words = [Word]()
     for _ in 0..<wordCount {
