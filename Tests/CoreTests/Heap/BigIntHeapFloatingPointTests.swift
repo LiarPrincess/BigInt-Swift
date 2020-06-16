@@ -6,7 +6,7 @@ import XCTest
 
 private typealias Word = BigIntStorage.Word
 
-class BigIntHeapFloatingPoint: XCTestCase {
+class BigIntHeapFloatingPointTests: XCTestCase {
 
   func test_special() {
     self.testBinaryFloatingPoint(Float32.self)

@@ -1,8 +1,6 @@
 import XCTest
 @testable import Core
 
-// swiftlint:disable file_length
-
 private typealias Word = BigIntStorage.Word
 
 private let smiZero = Smi.Storage.zero
