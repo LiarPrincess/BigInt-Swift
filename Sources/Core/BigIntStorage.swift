@@ -1,5 +1,6 @@
 import Foundation
 
+// swiftlint:disable empty_count
 // swiftlint:disable file_length
 
 /// Basically a `Word` collection with a sign.
@@ -42,7 +43,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     fileprivate var signAndCount: UInt
 
     fileprivate init(isNegative: Bool, count: Int) {
-      // swiftlint:disable:next empty_count
       assert(count >= 0)
       let sign = isNegative ? Self.signMask : 0
       self.signAndCount = sign | count.magnitude
@@ -251,7 +251,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   /// Add given `Word`  at the start of the buffer specified number of times.
   internal mutating func prepend(_ element: Word, count: Int) {
-    // swiftlint:disable:next empty_count
     assert(count >= 0)
 
     if count.isZero {
@@ -303,26 +302,26 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   // MARK: - Drop first
 
   /// Remove first `k` elements.
-  internal mutating func dropFirst(_ k: Int) {
-    assert(k >= 0)
+  internal mutating func dropFirst(wordCount count: Int) {
+    assert(count >= 0)
 
-    if k == 0 {
+    if count == 0 {
       return
     }
 
-    if k >= self.count {
+    if count >= self.count {
       self.removeAll()
       return
     }
 
     self.guaranteeUniqueBufferReference()
 
-    let newCount = self.count - k
-    assert(newCount > 0) // We checked 'k >= self.count'
+    let newCount = self.count - count
+    assert(newCount > 0) // We checked 'count >= self.count'
 
     self.buffer.withUnsafeMutablePointerToElements { startPtr in
       // Copy 'newCount' elements to front
-      let copySrcPtr = startPtr.advanced(by: k)
+      let copySrcPtr = startPtr.advanced(by: count)
       startPtr.assign(from: copySrcPtr, count: newCount)
     }
 
@@ -367,6 +366,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   internal mutating func setToZero() {
     self = Self.zero
+    assert(self.isPositive)
   }
 
   /// Set `self` to represent given `UInt`.

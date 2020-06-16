@@ -1,3 +1,6 @@
+// Some of the code was taken from mini-gmp: https://gmplib.org
+// GMP function name is in the comment above method.
+
 extension BigIntHeap {
 
   // MARK: - Left
@@ -13,8 +16,6 @@ extension BigIntHeap {
   }
 
   internal mutating func shiftLeft(count: Word) {
-    defer { self.checkInvariants() }
-
     if self.isZero || count.isZero {
       return
     }
@@ -72,8 +73,6 @@ extension BigIntHeap {
   }
 
   internal mutating func shiftLeft(count: BigIntHeap) {
-    defer { self.checkInvariants() }
-
     if count.isZero {
       return
     }
@@ -109,21 +108,37 @@ extension BigIntHeap {
     }
   }
 
+  /// static void
+  /// mpz_div_q_2exp (mpz_t q, const mpz_t u, mp_bitcnt_t bitShift,
+  ///     enum mpz_div_round_mode mode)
   internal mutating func shiftRight(count: Word) {
     if self.isZero || count.isZero {
-      return
-    }
-
-    // Something like '1011 >> 213123' always gives 0
-    guard count < self.bitWidth else {
-      self.storage.setToZero()
       return
     }
 
     let wordShift = Int(count / Word(Word.bitWidth))
     let bitShift = Int(count % Word(Word.bitWidth))
 
-    self.storage.dropFirst(wordShift)
+    // Swift uses what would be 'GMP_DIV_FLOOR' mode in 'GMP'.
+    // Which means that if we are negative and any of the removed bits is '1'
+    // then we have to round down.
+    //
+    // This is kinda HACK, kinda MAGIC,
+    // the person that wrote this in GMP is a AMAZING...
+    //
+    // Tip: Disable the 'if adjust' part later in this function and check unit
+    // tests for negative numbers. Every time we cut only '0' the test will pass,
+    // in other cases test will fail.
+    let adjust = self.isNegative
+      && self.hasAnyBitSet(wordShift: wordShift, bitShift: bitShift)
+
+    self.storage.dropFirst(wordCount: wordShift)
+
+    // Nonsensical shifts (such as '1 >> 1000') return '0' (or '-1' for negative).
+    if self.storage.isEmpty {
+      self.storage.set(to: self.isNegative ? -1 : 0)
+      return
+    }
 
     // If we are shifting by multiply of 'Word' than we are done.
     // For example for 4 bit word if we shift by 4, 8, 12 or 16
@@ -146,8 +161,8 @@ extension BigIntHeap {
     //   Shift by this 1 bit, because 4 (our Word size) + 1 = 5 (requested shift)
     //   [1011][0000] >> 1 = [0101][1000] (stored as: [1000][0101])
 
-    let lowShift = bitShift // In example: 5 % 4 = 1
-    let highShift = Word.bitWidth - lowShift // In example: 4 - 1 = 3
+    let highShift = bitShift // In example: 5 % 4 = 1
+    let lowShift = Word.bitWidth - highShift // In example: 4 - 1 = 3
 
     // 'self.storage.count' is the number of words after 'dropFirst',
     // so this is basically 'for every remaining word'.
@@ -168,12 +183,35 @@ extension BigIntHeap {
       }
     }
 
+    // We need to fix invariants before we call any other operation,
+    // because it may assume that all of the invariants are 'ok'.
+    let wasNegative = self.isNegative
     self.fixInvariants()
+
+    if wasNegative && self.isZero {
+      // '-1 >> 1000' = '-1'
+      self.storage.set(to: -1)
+    } else if adjust {
+      self.sub(other: Word(1))
+    }
+  }
+
+  private func hasAnyBitSet(wordShift: Int, bitShift: Int) -> Bool {
+    for i in 0..<wordShift {
+      let word = self.storage[i]
+      if word != 0 {
+        return true
+      }
+    }
+
+    let word = self.storage[wordShift]
+    let bitsMask = (Word(1) << bitShift) - 1
+    let bits = word & bitsMask
+
+    return bits > 0
   }
 
   internal mutating func shiftRight(count: BigIntHeap) {
-    defer { self.checkInvariants() }
-
     if count.isZero {
       return
     }

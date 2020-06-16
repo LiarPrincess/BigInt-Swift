@@ -234,7 +234,7 @@ class BigIntStorageTests: XCTestCase {
     let initialWords: [Word] = [.max, 1 , .min, 7]
     var storage = BigIntStorage(isNegative: false, words: initialWords)
 
-    storage.dropFirst(0)
+    storage.dropFirst(wordCount: 0)
 
     XCTAssertEqual(storage.count, initialWords.count)
 
@@ -247,7 +247,7 @@ class BigIntStorageTests: XCTestCase {
     let initialWords: [Word] = [.max, 1 , .min, 7]
     var storage = BigIntStorage(isNegative: false, words: initialWords)
 
-    storage.dropFirst(initialWords.count * 2)
+    storage.dropFirst(wordCount: initialWords.count * 2)
 
     XCTAssertEqual(storage.count, 0)
   }
@@ -257,7 +257,7 @@ class BigIntStorageTests: XCTestCase {
     let orginal = BigIntStorage(isNegative: false, words: initialWords)
 
     var copy = orginal
-    copy.dropFirst(initialWords.count * 2)
+    copy.dropFirst(wordCount: initialWords.count * 2)
 
     XCTAssertEqual(orginal.count, initialWords.count)
 
@@ -271,7 +271,7 @@ class BigIntStorageTests: XCTestCase {
     var storage = BigIntStorage(isNegative: false, words: initialWords)
 
     let dropCount = 3
-    storage.dropFirst(dropCount)
+    storage.dropFirst(wordCount: dropCount)
 
     let expected = initialWords.dropFirst(dropCount)
     XCTAssertEqual(storage.count, expected.count)
