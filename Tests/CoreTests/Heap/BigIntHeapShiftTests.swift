@@ -88,23 +88,25 @@ class BigIntHeapShiftTests: XCTestCase {
   }
 
   func test_left_smi_butActuallyRight() {
+    let wordShift = 1
+    let bitShift = wordShift * Word.bitWidth
+
     for p in generateHeapValues(countButNotReally: 50) {
       // We just want to test if we call 'shiftRight',
       // we do not care about edge cases.
-      let wordShift = 1
+
       if p.words.count <= wordShift {
         continue
       }
 
       var value = BigIntHeap(isNegative: p.isNegative, words: p.words)
+      value.shiftLeft(count: -Smi.Storage(bitShift))
 
       let expectedWords = Array(p.words.dropFirst(wordShift))
       let expectedIsNegative = !expectedWords.isEmpty && p.isNegative
       let expected = BigIntHeap(isNegative: expectedIsNegative,
                                 words: expectedWords)
 
-      let bitShift = wordShift * Word.bitWidth
-      value.shiftLeft(count: -Smi.Storage(bitShift))
       XCTAssertEqual(value, expected, "\(value) >> \(bitShift)")
     }
   }
@@ -239,27 +241,25 @@ class BigIntHeapShiftTests: XCTestCase {
     XCTAssertEqual(highWord, 0b0101)
   }
 
-/*
   func test_right_smi_butActuallyLeft() {
-   // TODO: Rename 'left' -> 'right'
-     for p in generateHeapValues(countButNotReally: 50) {
-    // We just want to test if we call 'shiftRight',
-    // we do not care about edge cases.
-    let wordShift = 1
-    if p.words.count <= wordShift {
-      continue
+    let bitShift = Word.bitWidth
+
+    for p in generateHeapValues(countButNotReally: 50) {
+      // We just want to test if we call 'shiftLeft',
+      // we do not care about edge cases.
+
+      if p.isZero {
+        continue
+      }
+
+      var value = BigIntHeap(isNegative: p.isNegative, words: p.words)
+      value.shiftRight(count: -Smi.Storage(bitShift))
+
+      let expected = BigIntHeap(isNegative: p.isNegative,
+                                words: [0] + p.words)
+
+      XCTAssertEqual(value, expected, "\(value) >> \(bitShift)")
     }
-
-    var value = BigIntHeap(isNegative: p.isNegative, words: p.words)
-
-    let expectedWords = Array(p.words.dropFirst(wordShift))
-    let expectedIsNegative = !expectedWords.isEmpty && p.isNegative
-    let expected = BigIntHeap(isNegative: expectedIsNegative,
-                              words: expectedWords)
-
-    let bitShift = wordShift * Word.bitWidth
-    value.shiftLeft(count: -Smi.Storage(bitShift))
-    XCTAssertEqual(value, expected, "\(value) >> \(bitShift)")
   }
 
   // MARK: - Right - heap
@@ -273,19 +273,18 @@ class BigIntHeapShiftTests: XCTestCase {
   }
 
   func test_right_heap_byBits() {
-    var value = BigIntHeap(isNegative: false, words: 0b01)
-    let expected = BigIntHeap(isNegative: false, words: 0b10)
+    var value = BigIntHeap(isNegative: false, words: 0b10)
+    let expected = BigIntHeap(isNegative: false, words: 0b01)
 
     value.shiftRight(count: BigIntHeap(1))
     XCTAssertEqual(value, expected, "\(value) == \(expected)")
   }
 
   func test_right_heap_butActuallyRight() {
-    var value = BigIntHeap(isNegative: false, words: 0b11)
-    let expected = BigIntHeap(isNegative: false, words: 0b01)
+    var value = BigIntHeap(isNegative: false, words: 0b01)
+    let expected = BigIntHeap(isNegative: false, words: 0b10)
 
     value.shiftRight(count: BigIntHeap(-1))
     XCTAssertEqual(value, expected, "\(value) == \(expected)")
   }
-*/
 }
