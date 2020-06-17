@@ -60,8 +60,11 @@ extension BigIntHeap {
       return 0
     }
 
-    let sign = 1
-    return self.storage.count * Word.bitWidth - last.leadingZeroBitCount + sign
+    // If we are positive we need '0' prefix,
+    // starting with '1' means negative number
+    let sign = self.isPositive ? 1 : 0
+    let wordBits = self.storage.count * Word.bitWidth
+    return wordBits - last.leadingZeroBitCount + sign
   }
 
   internal var minRequiredWidth: Int {

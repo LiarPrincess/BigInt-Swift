@@ -42,8 +42,35 @@ class BigIntHeapBitTests: XCTestCase {
   }
 
   // MARK: - Bit width
-  // ?
-  // TODO: ?
+
+  func test_bitWidth_singleWord() {
+    let zero = BigIntHeap(0)
+    XCTAssertEqual(zero.bitWidth, 0)
+
+    let plus1 = BigIntHeap(1)
+    XCTAssertEqual(plus1.bitWidth, 2) // 01
+
+    let minus1 = BigIntHeap(-1)
+    XCTAssertEqual(minus1.bitWidth, 1) // 1
+
+    let plusMax = BigIntHeap(isNegative: false, words: .max)
+    XCTAssertEqual(plusMax.bitWidth, Word.bitWidth + 1) // 0 1111...
+
+    let minusMax = BigIntHeap(isNegative: true, words: .max)
+    XCTAssertEqual(minusMax.bitWidth, Word.bitWidth) // 1111...
+  }
+
+  func test_bitWidth_multipleWords() {
+    for int in generateIntValues(countButNotReally: 10) {
+      let word = Word(bitPattern: int)
+
+      let positive = BigIntHeap(isNegative: false, words: word, 1)
+      XCTAssertEqual(positive.bitWidth, Word.bitWidth + 2) // 01 word
+
+      let negative = BigIntHeap(isNegative: true, words: word, 1)
+      XCTAssertEqual(negative.bitWidth, Word.bitWidth + 1) // 1 word
+    }
+  }
 
   // MARK: - Trailing zero bit count
 
