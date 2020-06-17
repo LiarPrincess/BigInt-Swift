@@ -69,9 +69,10 @@ extension BigIntHeap {
   /// - Important:
   /// `0` is considered to have zero trailing zero bits.
   internal var trailingZeroBitCount: Int {
-    if let index = self.storage.lastIndex(where: { $0 != 0 }) {
-      let word = self.storage[index]
-      return index * Word.bitWidth + word.trailingZeroBitCount
+    for (index, word) in self.storage.enumerated() {
+      if word != 0 { // swiftlint:disable:this for_where
+        return index * Word.bitWidth + word.trailingZeroBitCount
+      }
     }
 
     assert(self.isZero)
