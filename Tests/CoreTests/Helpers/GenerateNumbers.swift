@@ -6,27 +6,45 @@ private let smiZero = Smi.Storage.zero
 private let smiMax = Smi.Storage.max
 private let smiMin = Smi.Storage.min
 
-// MARK: - Smi
+// MARK: - Fixed width integers
 
 /// We will return `2 * countButNotReally + 5` values (don't ask).
 internal func generateSmiValues(countButNotReally: Int) -> [Smi.Storage] {
-  var result = [Smi.Storage]()
+  return generateValues(
+    countButNotReally: countButNotReally,
+    type: Smi.Storage.self
+  )
+}
+
+/// We will return `2 * countButNotReally + 5` values (don't ask).
+internal func generateIntValues(countButNotReally: Int) -> [Int] {
+  return generateValues(
+    countButNotReally: countButNotReally,
+    type: Int.self
+  )
+}
+
+private func generateValues<T: FixedWidthInteger>(
+  countButNotReally: Int,
+  type: T.Type
+) -> [T] {
+  assert(countButNotReally > 0)
+
+  var result = [T]()
   result.append(0)
   result.append(-1)
   result.append(1)
-  result.append(.min)
-  result.append(.max)
 
-  let smiSpan = 2 * Int(smiMax) + 1
-  let step = smiSpan / countButNotReally
+  let step = Int(T.max) / countButNotReally
 
+  // 1st iteration will append 'T.min' and 'T.max'
   for i in 0..<countButNotReally {
     let s = i * step
 
-    let fromMax = Smi.Storage(Int(smiMax) - s)
+    let fromMax = T(Int(T.max) - s)
     result.append(fromMax)
 
-    let fromMin = Smi.Storage(Int(smiMin) + s)
+    let fromMin = T(Int(T.min) + s)
     result.append(fromMin)
   }
 

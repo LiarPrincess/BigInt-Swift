@@ -80,6 +80,34 @@ class BigIntHeapBitTests: XCTestCase {
   }
 
   // MARK: - Invert
-  // for every word - not, what with sign?
-  // TODO: ?
+
+  func test_invert_singleWord() {
+    for int in generateIntValues(countButNotReally: 100) {
+      var value = BigIntHeap(int)
+      value.invert()
+
+      let expectedValue = ~int
+      let expected = BigIntHeap(expectedValue)
+      XCTAssertEqual(value, expected)
+
+      XCTAssertEqual(int + expectedValue, -1)
+    }
+  }
+
+  func test_invert_multipleWords() {
+    let minus1 = BigIntHeap(-1)
+
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = p.create()
+      value.invert()
+
+      // We always change sign, '0' becomes '-1'
+      XCTAssertEqual(value.isNegative, !p.isNegative, "\(p)")
+
+      // x + (~x) = -1
+      let orginal = p.create()
+      value.add(other: orginal)
+      XCTAssertEqual(value, minus1, "\(p)")
+    }
+  }
 }
