@@ -1,6 +1,7 @@
 import XCTest
 @testable import Core
 
+// TODO: Shift right for negative multiple words + non-word shift test
 private typealias Word = BigIntStorage.Word
 
 private let smiZero = Smi.Storage.zero

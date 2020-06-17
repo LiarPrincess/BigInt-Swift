@@ -42,6 +42,12 @@ extension BigIntHeap {
   // MARK: - Words
 
   internal var words: BigIntStorage {
+    if self.isZero {
+      var singleZeroElement = BigIntStorage(minimumCapacity: 1)
+      singleZeroElement.append(0)
+      return singleZeroElement
+    }
+
     return self.asTwoComplement()
   }
 
