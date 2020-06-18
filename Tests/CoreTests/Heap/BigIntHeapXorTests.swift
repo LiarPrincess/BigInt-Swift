@@ -6,7 +6,7 @@ import XCTest
 private typealias Word = BigIntStorage.Word
 
 class BigIntHeapXorTests: XCTestCase {
-/*
+
   // MARK: - Smi
 
   func test_smi_selfZero() {
@@ -49,32 +49,33 @@ class BigIntHeapXorTests: XCTestCase {
 
     // Both positive
     var lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    print(lhs)
     lhs.xor(other: rhs)
 
-    var expected = BigIntHeap(isNegative: false, words: [3689348814809822135, 2459565876494606880])
+    var expected = BigIntHeap(isNegative: false, words: [3689348814506778775, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
 
     // Self negative, other positive
     lhs = BigIntHeap(isNegative: true, words: lhsWords)
     lhs.xor(other: rhs)
 
-    expected = BigIntHeap(isNegative: true, words: [3689348814438866967, 2459565876494606880])
+    expected = BigIntHeap(isNegative: true, words: [3689348814506778775, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
 
     // Self positive, other negative
     lhs = BigIntHeap(isNegative: false, words: lhsWords)
     lhs.xor(other: -rhs)
 
-    expected = BigIntHeap(isNegative: true, words: 67911817)
+    expected = BigIntHeap(isNegative: true, words: [3689348814506778793, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
 
     // Both negative
     lhs = BigIntHeap(isNegative: true, words: lhsWords)
     lhs.xor(other: -rhs)
-    expected = BigIntHeap(isNegative: true, words: 303043351)
+    expected = BigIntHeap(isNegative: false, words: [3689348814506778793, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
   }
-*/
+
   // MARK: - Heap
 
   func test_heap_selfZero() {
