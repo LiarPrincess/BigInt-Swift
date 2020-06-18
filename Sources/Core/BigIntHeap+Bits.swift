@@ -113,6 +113,37 @@ extension BigIntHeap {
 
   // MARK: - And
 
+  internal mutating func and(other: Smi.Storage) {
+    if self.isZero {
+      return
+    }
+
+    if other.isZero {
+      self.storage.setToZero()
+      return
+    }
+
+    // Negative numbers are complicated, so we give up and allocate.
+    if self.isNegative || other.isNegative {
+      let heap = BigIntHeap(other)
+      self.and(other: heap)
+      return
+    }
+
+    // Just using '-' may overflow!
+    let otherWord = Word(other.magnitude)
+
+    assert(!self.storage.isEmpty, "Unexpected '0'")
+    let selfWord = self.storage[0]
+
+    self.storage.removeAll()
+    self.storage.append(selfWord & otherWord)
+
+    // 'other' is positive, so no matter what our sign is the result  will be '+'
+    self.storage.isNegative = false
+    self.fixInvariants()
+  }
+
   /// void
   /// mpz_and (mpz_t r, const mpz_t u, const mpz_t v)
   ///

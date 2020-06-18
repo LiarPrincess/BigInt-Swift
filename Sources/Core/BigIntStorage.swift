@@ -355,7 +355,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   // MARK: - Remove all
 
-  private mutating func removeAll() {
+  internal mutating func removeAll() {
     // We do not have to call 'self.guaranteeUniqueBufferReference'
     // because 'self.count' will do it anyway.
     self.count = 0
