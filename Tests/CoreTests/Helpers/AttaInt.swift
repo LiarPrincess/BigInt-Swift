@@ -2,6 +2,11 @@ import XCTest
 import BigIntProxy
 @testable import Core
 
+internal func attaInt<T: BinaryInteger>(_ value: T) -> BigIntProxy {
+  let word = BigIntStorage.Word(value.magnitude)
+  return attaInt(isNegative: value.isNegative, words: [word])
+}
+
 internal func attaInt(isNegative: Bool,
                       words: [BigIntStorage.Word]) -> BigIntProxy {
   let sign: BigIntProxy.Sign = isNegative ? .minus : .plus

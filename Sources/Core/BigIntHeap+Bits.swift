@@ -211,6 +211,35 @@ extension BigIntHeap {
 
   // MARK: - Or
 
+  internal mutating func or(other: Smi.Storage) {
+    if self.isZero {
+      self.storage.set(to: Int(other))
+      return
+    }
+
+    if other.isZero {
+      return
+    }
+
+    // TODO: We can actally do a simple 2 complement here
+    // Negative numbers are complicated, so we give up and allocate.
+    if self.isNegative || other.isNegative {
+      let heap = BigIntHeap(other)
+      self.or(other: heap)
+      return
+    }
+
+    // Just using '-' may overflow!
+    let otherWord = Word(other.magnitude)
+
+    assert(!self.storage.isEmpty, "Unexpected '0'")
+    self.storage[0] |= otherWord
+
+    // 'other' is positive, so no matter what our sign stays the same
+    // self.storage.isNegative = no changes
+    self.fixInvariants()
+  }
+
   /// void
   /// mpz_ior (mpz_t r, const mpz_t u, const mpz_t v)
   ///

@@ -4,30 +4,28 @@ import XCTest
 // swiftlint:disable number_separator
 
 private typealias Word = BigIntStorage.Word
-private typealias Words = [Word]
-private typealias TestTriple = (lhs: Words, rhs: Words, result: Words)
 
 class BigIntHeapOrTests: XCTestCase {
-/*
+
   // MARK: - Smi
 
   func test_smi_selfZero() {
-    let zero = BigIntHeap()
-
     for smi in generateSmiValues(countButNotReally: 100) {
       var lhs = BigIntHeap()
       lhs.or(other: smi)
-      XCTAssertEqual(lhs, zero)
+
+      // 'lhs' should be replaced by 'smi'
+      XCTAssertEqual(lhs, BigIntHeap(smi))
     }
   }
 
   func test_smi_otherZero() {
-    let zero = BigIntHeap()
-
     for p in generateHeapValues(countButNotReally: 100) {
       var lhs = p.create()
       lhs.or(other: Smi.Storage.zero)
-      XCTAssertEqual(lhs, zero)
+
+      let noChanges = p.create()
+      XCTAssertEqual(lhs, noChanges)
     }
   }
 
@@ -37,10 +35,10 @@ class BigIntHeapOrTests: XCTestCase {
         var lhs = BigIntHeap(lhsInt)
         lhs.or(other: rhs)
 
-        let expectedInt = lhsInt & Int(rhs)
+        let expectedInt = lhsInt | Int(rhs)
         let expected = BigIntHeap(expectedInt)
 
-        XCTAssertEqual(lhs, expected, "\(lhsInt) & \(rhs)")
+        XCTAssertEqual(lhs, expected, "\(lhsInt) | \(rhs)")
       }
     }
   }
@@ -52,26 +50,31 @@ class BigIntHeapOrTests: XCTestCase {
     // Both positive
     var lhs = BigIntHeap(isNegative: false, words: lhsWords)
     lhs.or(other: rhs)
-    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: 303043360))
+
+    var expected = BigIntHeap(isNegative: false, words: [3689348814809822135, 2459565876494606880])
+    XCTAssertEqual(lhs, expected)
 
     // Self negative, other positive
     lhs = BigIntHeap(isNegative: true, words: lhsWords)
     lhs.or(other: rhs)
-    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: 67911808))
+
+    expected = BigIntHeap(isNegative: true, words: [3689348814438866967, 2459565876494606880])
+    XCTAssertEqual(lhs, expected)
 
     // Self positive, other negative
     lhs = BigIntHeap(isNegative: false, words: lhsWords)
     lhs.or(other: -rhs)
-    var expected = BigIntHeap(isNegative: false, words: [3689348814438866976, 2459565876494606880])
+
+    expected = BigIntHeap(isNegative: true, words: 67911817)
     XCTAssertEqual(lhs, expected)
 
     // Both negative
     lhs = BigIntHeap(isNegative: true, words: lhsWords)
     lhs.or(other: -rhs)
-    expected = BigIntHeap(isNegative: true, words: [3689348814809822144, 2459565876494606880])
+    expected = BigIntHeap(isNegative: true, words: 303043351)
     XCTAssertEqual(lhs, expected)
   }
-*/
+
   // MARK: - Heap
 
   func test_heap_selfZero() {
@@ -125,7 +128,7 @@ class BigIntHeapOrTests: XCTestCase {
       let expectedInt = lhsInt | rhsInt
       let expected = BigIntHeap(expectedInt)
 
-      XCTAssertEqual(lhs, expected, "\(lhsInt) & \(rhsInt)")
+      XCTAssertEqual(lhs, expected, "\(lhsInt) | \(rhsInt)")
     }
   }
 

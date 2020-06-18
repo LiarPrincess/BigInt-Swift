@@ -4,8 +4,6 @@ import XCTest
 // swiftlint:disable number_separator
 
 private typealias Word = BigIntStorage.Word
-private typealias Words = [Word]
-private typealias TestTriple = (lhs: Words, rhs: Words, result: Words)
 
 class BigIntHeapAndTests: XCTestCase {
 
