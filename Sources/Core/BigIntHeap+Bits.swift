@@ -173,7 +173,7 @@ extension BigIntHeap {
       result[resultCount] = bothNegative
     }
 
-    result.isNegative = bothNegative.isTrue
+    result.isNegative = self.isNegative && other.isNegative
     result.fixInvariants()
     self.storage = result
   }

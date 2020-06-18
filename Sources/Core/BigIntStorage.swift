@@ -141,6 +141,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
   internal init(repeating repeatedValue: Word, count: Int) {
     self.init(minimumCapacity: count)
     Self.memset(dst: self.buffer, value: repeatedValue, count: count)
+    self.count = count
   }
 
   internal init(isNegative: Bool, magnitude: Word) {
