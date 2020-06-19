@@ -7,7 +7,7 @@ private typealias Word = BigIntStorage.Word
 
 class BigIntHeapOrTests: XCTestCase {
 
-  // MARK: - Smi
+  // MARK: - Smi - zero
 
   func test_smi_selfZero() {
     for smi in generateSmiValues(countButNotReally: 100) {
@@ -28,6 +28,8 @@ class BigIntHeapOrTests: XCTestCase {
       XCTAssertEqual(lhs, noChanges)
     }
   }
+
+  // MARK: - Smi - other
 
   func test_smi_singleWord() {
     for lhsInt in generateIntValues(countButNotReally: 10) {
@@ -75,7 +77,7 @@ class BigIntHeapOrTests: XCTestCase {
     XCTAssertEqual(lhs, expected)
   }
 
-  // MARK: - Heap
+  // MARK: - Heap - zero
 
   func test_heap_selfZero() {
     for rhsInt in generateIntValues(countButNotReally: 100) {
@@ -101,6 +103,8 @@ class BigIntHeapOrTests: XCTestCase {
       XCTAssertEqual(lhs, noChanges)
     }
   }
+
+  // MARK: - Heap - single word
 
   func test_heap_singleWord_trivial() {
     let lhsWord: Word = 0b1100
@@ -131,6 +135,8 @@ class BigIntHeapOrTests: XCTestCase {
       XCTAssertEqual(lhs, expected, "\(lhsInt) | \(rhsInt)")
     }
   }
+
+  // MARK: - Heap - multiple words
 
   func test_heap_lhsLonger() {
     let lhsWords: [Word] = [3689348814741910327, 2459565876494606880]
@@ -206,7 +212,6 @@ class BigIntHeapOrTests: XCTestCase {
     XCTAssertEqual(lhs, expected)
   }
 
-  /// Both have 2 words.
   func test_heap_bothMultipleWords() {
     let lhsWords: [Word] = [1844674407370955168, 4304240283865562048]
     let rhsWords: [Word] = [3689348814741910327, 2459565876494606880]
