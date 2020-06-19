@@ -2,6 +2,7 @@ extension BigIntHeap {
 
   // MARK: - Smi
 
+  // TODO: Recheck all of the uses of 'checkInvariants'
   internal mutating func mul(other: Smi.Storage) {
     defer { self.checkInvariants() }
 
@@ -34,17 +35,7 @@ extension BigIntHeap {
       return
     }
 
-    // But wait, there is more:
-    // if 'other' is a power of 2 -> we can just shift left
-    let otherLSB = other.trailingZeroBitCount
-    let isOtherPowerOf2 = (other >> otherLSB) == 1
-    if isOtherPowerOf2 {
-      self.shiftLeft(count: otherLSB.magnitude)
-      return
-    }
-
     // And finally non-special case:
-
     // Just using '-' may overflow!
     let word = Word(other.magnitude)
     Self.mulMagnitude(lhs: &self.storage, rhs: word)
