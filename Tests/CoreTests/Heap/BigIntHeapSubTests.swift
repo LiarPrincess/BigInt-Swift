@@ -20,7 +20,7 @@ class BigIntHeapSubTests: XCTestCase {
     XCTAssertEqual(value, expected)
   }
 
-  /// -smiMax + 0 = -smiMax
+  /// -smiMax - 0 = -smiMax
   func test_smi_selfNegative_otherZero() {
     var value = BigIntHeap(isNegative: true, words: smiMaxAsWord)
     value.sub(other: smiZero)
@@ -116,7 +116,7 @@ class BigIntHeapSubTests: XCTestCase {
     XCTAssertEqual(value, expected)
   }
 
-  /// Word.max +- (-smiMax) = well... a lot
+  /// Word.max - (-smiMax) = well... a lot
   func test_smi_selfPositive_otherNegative_newWord() {
     var value = BigIntHeap(isNegative: false, words: Word.max)
     value.sub(other: -smiMax)
@@ -145,5 +145,56 @@ class BigIntHeapSubTests: XCTestCase {
     // Why '-1'? 99 + 5 = 104, not 105!
     let expected = BigIntHeap(isNegative: true, words: smiMaxAsWord - 1, 1)
     XCTAssertEqual(value, expected)
+  }
+
+  // MARK: - Smi - generated
+
+  func test_smi_generated() {
+    let values = generateSmiValues(countButNotReally: 20)
+
+    for (lhs, rhs) in allPossiblePairings(values: values) {
+      let lhsPlus = lhs == .min ? nil : abs(lhs)
+      let rhsPlus = rhs == .min ? nil : abs(rhs)
+      let lhsMinus = lhs < 0 ? lhs : -lhs
+      let rhsMinus = rhs < 0 ? rhs : -rhs
+
+      // a - b
+      if let lhs = lhsPlus, let rhs = rhsPlus {
+        let (expected, overflow) = lhs.subtractingReportingOverflow(rhs)
+        if !overflow {
+          var lhsHeap = BigIntHeap(lhs)
+          lhsHeap.sub(other: rhs)
+          XCTAssertTrue(lhsHeap == expected, "\(lhs) - \(rhs)")
+        }
+      }
+
+      // a - (-b)
+      if let lhs = lhsPlus {
+        let (expected, overflow) = lhs.subtractingReportingOverflow(rhsMinus)
+        if !overflow {
+          var lhsHeap = BigIntHeap(lhs)
+          lhsHeap.sub(other: rhsMinus)
+          XCTAssertTrue(lhsHeap == expected, "\(lhs) - \(rhsMinus)")
+        }
+      }
+
+      // -a - b
+      if let rhs = rhsPlus {
+        let (expected, overflow) = lhsMinus.subtractingReportingOverflow(rhs)
+        if !overflow {
+          var lhsHeap = BigIntHeap(lhsMinus)
+          lhsHeap.sub(other: rhs)
+          XCTAssertTrue(lhsHeap == expected, "\(lhsMinus) - \(rhs)")
+        }
+      }
+
+      // -a - (-b)
+      let (expected, overflow) = lhsMinus.subtractingReportingOverflow(rhsMinus)
+      if !overflow {
+        var lhsHeap = BigIntHeap(lhsMinus)
+        lhsHeap.sub(other: rhsMinus)
+        XCTAssertTrue(lhsHeap == expected, "\(lhsMinus) - \(rhsMinus)")
+      }
+    }
   }
 }

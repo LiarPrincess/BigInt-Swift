@@ -146,4 +146,55 @@ class BigIntHeapAddTests: XCTestCase {
     let expected = BigIntHeap(isNegative: false, words: smiMaxAsWord - 10)
     XCTAssertEqual(value, expected)
   }
+
+  // MARK: - Smi - generated
+
+  func test_smi_generated() {
+    let values = generateSmiValues(countButNotReally: 20)
+
+    for (lhs, rhs) in allPossiblePairings(values: values) {
+      let lhsPlus = lhs == .min ? nil : abs(lhs)
+      let rhsPlus = rhs == .min ? nil : abs(rhs)
+      let lhsMinus = lhs < 0 ? lhs : -lhs
+      let rhsMinus = rhs < 0 ? rhs : -rhs
+
+      // a + b
+      if let lhs = lhsPlus, let rhs = rhsPlus {
+        let (expected, overflow) = lhs.addingReportingOverflow(rhs)
+        if !overflow {
+          var lhsHeap = BigIntHeap(lhs)
+          lhsHeap.add(other: rhs)
+          XCTAssertTrue(lhsHeap == expected, "\(lhs) + \(rhs)")
+        }
+      }
+
+      // a + (-b)
+      if let lhs = lhsPlus {
+        let (expected, overflow) = lhs.addingReportingOverflow(rhsMinus)
+        if !overflow {
+          var lhsHeap = BigIntHeap(lhs)
+          lhsHeap.add(other: rhsMinus)
+          XCTAssertTrue(lhsHeap == expected, "\(lhs) + \(rhsMinus)")
+        }
+      }
+
+      // -a + b
+      if let rhs = rhsPlus {
+        let (expected, overflow) = lhsMinus.addingReportingOverflow(rhs)
+        if !overflow {
+          var lhsHeap = BigIntHeap(lhsMinus)
+          lhsHeap.add(other: rhs)
+          XCTAssertTrue(lhsHeap == expected, "\(lhsMinus) + \(rhs)")
+        }
+      }
+
+      // -a + (-b)
+      let (expected, overflow) = lhsMinus.addingReportingOverflow(rhsMinus)
+      if !overflow {
+        var lhsHeap = BigIntHeap(lhsMinus)
+        lhsHeap.add(other: rhsMinus)
+        XCTAssertTrue(lhsHeap == expected, "\(lhsMinus) + \(rhsMinus)")
+      }
+    }
+  }
 }
