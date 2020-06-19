@@ -1,6 +1,9 @@
 import XCTest
 @testable import Core
 
+// swiftlint:disable line_length
+// swiftlint:disable number_separator
+
 private typealias Word = BigIntStorage.Word
 
 private let smiZero = Smi.Storage.zero
@@ -115,6 +118,59 @@ class BigIntHeapMulTests: XCTestCase {
         let expected4 = BigIntHeap(isNegative: p.isNegative, words: expectedWord4)
         XCTAssertEqual(value, expected4, "\(p) * \(power)")
       }
+    }
+  }
+
+  // MARK: - Smi - Self has multiple words
+
+  func test_smi_lhsLonger() {
+    let lhsWords: [Word] = [3689348814741910327, 2459565876494606880]
+    let rhs: Smi.Storage = 370955168
+
+    // Both positive
+    var lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    lhs.mul(other: rhs)
+    var expected = BigIntHeap(isNegative: false, words: [11068046445635360608, 1229782937530123449, 49460689])
+    XCTAssertEqual(lhs, expected)
+
+    // Self negative, other positive
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    lhs.mul(other: rhs)
+    expected = BigIntHeap(isNegative: true, words: [11068046445635360608, 1229782937530123449, 49460689])
+    XCTAssertEqual(lhs, expected)
+
+    // Self positive, other negative
+    lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    lhs.mul(other: -rhs)
+    expected = BigIntHeap(isNegative: true, words: [11068046445635360608, 1229782937530123449, 49460689])
+    XCTAssertEqual(lhs, expected)
+
+    // Both negative
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    lhs.mul(other: -rhs)
+    expected = BigIntHeap(isNegative: false, words: [11068046445635360608, 1229782937530123449, 49460689])
+    XCTAssertEqual(lhs, expected)
+  }
+
+  // MARK: - Smi - generated
+
+  func test_smi_generated() {
+    // If 'Smi' has 32 bit and 'Word' 64, then 'smi * smi'
+    // will always have simgle word.
+    let smiWidth = Smi.Storage.bitWidth
+    assert(Word.bitWidth >= 2 * smiWidth)
+
+    let values = generateSmiValues(countButNotReally: 15)
+
+    for (lhs, rhs) in allPossiblePairings(values: values) {
+      var value = BigIntHeap(lhs)
+      value.mul(other: rhs)
+
+      let (high, low) = lhs.multipliedFullWidth(by: rhs)
+      let expectedValue = Int(high) << smiWidth | Int(low)
+      let expected = BigIntHeap(expectedValue)
+
+      XCTAssertEqual(value, expected, "\(lhs) * \(rhs)")
     }
   }
 }
