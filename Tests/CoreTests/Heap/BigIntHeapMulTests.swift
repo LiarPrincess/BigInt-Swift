@@ -3,12 +3,22 @@ import XCTest
 
 // swiftlint:disable line_length
 // swiftlint:disable number_separator
+// swiftlint:disable file_length
 
 private typealias Word = BigIntStorage.Word
 
 private let smiZero = Smi.Storage.zero
 private let smiMax = Smi.Storage.max
 private let smiMaxAsWord = Word(smiMax.magnitude)
+
+/// `2^n = value`
+private typealias Pow2 = (value: Int, n: Int)
+
+private let powersOf2: [Pow2] = [
+  (value: 2, n: 1),
+  (value: 4, n: 2),
+  (value: 16, n: 4)
+]
 
 class BigIntHeapMulTests: XCTestCase {
 
@@ -88,37 +98,31 @@ class BigIntHeapMulTests: XCTestCase {
 
   // MARK: - Smi pow 2
 
-  /// `2^n = value`
-  private typealias Pow2 = (value: Int, n: Int)
-
   /// Mul by power of `n^2` should shift left by `n`
   func test_smi_otherIsPowerOf2() {
-    let powers: [Pow2] = [
-      (value: 2, n: 1),
-      (value: 4, n: 2),
-      (value: 16, n: 4)
-    ]
-
     for p in generateHeapValues(countButNotReally: 100) {
       if p.isZero {
         continue
       }
 
-      for (power, n) in powers {
-        let maxBeforeShift = 1 << (Word.bitWidth - n)
-        let doesNotShiftOutsideOfWord = p.words.allSatisfy { $0 < maxBeforeShift }
-        guard doesNotShiftOutsideOfWord else {
+      for power in powersOf2 {
+        guard self.canBeShiftedWithoutOverflows(words: p.words, power: power) else {
           continue
         }
 
         var value = p.create()
-        value.mul(other: Smi.Storage(power))
+        value.mul(other: Smi.Storage(power.value))
 
-        let expectedWord4 = p.words.map { $0 << n }
-        let expected4 = BigIntHeap(isNegative: p.isNegative, words: expectedWord4)
-        XCTAssertEqual(value, expected4, "\(p) * \(power)")
+        let expectedWords = p.words.map { $0 << power.n }
+        let expected = BigIntHeap(isNegative: p.isNegative, words: expectedWords)
+        XCTAssertEqual(value, expected, "\(p) * \(power.value)")
       }
     }
+  }
+
+  private func canBeShiftedWithoutOverflows(words: [Word], power: Pow2) -> Bool {
+    let maxBeforeShift = 1 << (Word.bitWidth - power.n)
+    return words.allSatisfy { $0 < maxBeforeShift }
   }
 
   // MARK: - Smi - Self has multiple words
@@ -155,8 +159,8 @@ class BigIntHeapMulTests: XCTestCase {
   // MARK: - Smi - generated
 
   func test_smi_generated() {
-    // If 'Smi' has 32 bit and 'Word' 64, then 'smi * smi'
-    // will always have simgle word.
+    // If 'Smi' has 32 bit and 'Word' 64,
+    // then 'smi * smi' will always have single word.
     let smiWidth = Smi.Storage.bitWidth
     assert(Word.bitWidth >= 2 * smiWidth)
 
@@ -171,6 +175,261 @@ class BigIntHeapMulTests: XCTestCase {
       let expected = BigIntHeap(expectedValue)
 
       XCTAssertEqual(value, expected, "\(lhs) * \(rhs)")
+    }
+  }
+
+  // MARK: - Heap - 0
+
+  func test_heap_otherZero() {
+    let zero = BigIntHeap()
+    let expectedZero = BigIntHeap()
+
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = p.create()
+      value.mul(other: zero)
+
+      XCTAssertEqual(value, expectedZero)
+    }
+  }
+
+  func test_heap_selfZero() {
+    let expectedZero = BigIntHeap()
+
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = BigIntHeap()
+      let other = p.create()
+      value.mul(other: other)
+
+      XCTAssertEqual(value, expectedZero)
+    }
+  }
+
+  // MARK: - Heap - +1
+
+  func test_heap_otherPlusOne() {
+    let one = BigIntHeap(1)
+
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = p.create()
+      value.mul(other: one)
+
+      let noChanges = p.create()
+      XCTAssertEqual(value, noChanges)
+    }
+  }
+
+  func test_heap_selfPlusOne() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = BigIntHeap(1)
+      let other = p.create()
+      value.mul(other: other)
+
+      XCTAssertEqual(value, other)
+    }
+  }
+
+  // MARK: - Heap - -1
+
+  func test_heap_otherMinusOne() {
+    let minus1 = BigIntHeap(-1)
+
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = p.create()
+      value.mul(other: minus1)
+
+      let expectedIsNegative = p.isPositive && !p.isZero
+      let expected = BigIntHeap(isNegative: expectedIsNegative, words: p.words)
+      XCTAssertEqual(value, expected)
+    }
+  }
+
+  func test_heap_selfMinusOne() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      var value = BigIntHeap(-1)
+      let other = p.create()
+      value.mul(other: other)
+
+      let expectedIsNegative = p.isPositive && !p.isZero
+      let expected = BigIntHeap(isNegative: expectedIsNegative, words: p.words)
+      XCTAssertEqual(value, expected)
+    }
+  }
+
+  // MARK: - Smi pow 2
+
+  /// Mul by power of `n^2` should shift left by `n`
+  func test_heap_otherIsPowerOf2() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      if p.isZero {
+        continue
+      }
+
+      for power in powersOf2 {
+        guard self.canBeShiftedWithoutOverflows(words: p.words, power: power) else {
+          continue
+        }
+
+        var value = p.create()
+        let other = BigIntHeap(power.value)
+        value.mul(other: other)
+
+        let expectedWords = p.words.map { $0 << power.n }
+        let expected = BigIntHeap(isNegative: p.isNegative, words: expectedWords)
+        XCTAssertEqual(value, expected, "\(p) * \(power.value)")
+      }
+    }
+  }
+
+  // MARK: - Heap - multiple words
+
+  func test_heap_lhsLonger() {
+    let lhsWords: [Word] = [3689348814741910327, 2459565876494606880]
+    let rhsWords: [Word] = [1844674407370955168]
+    let expectedWords: [Word] = [
+      18077809192235360608, 16110156491039675065, 245956587649460688
+    ]
+
+    // Both positive
+    var lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    var rhs = BigIntHeap(isNegative: false, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: expectedWords))
+
+    // Self negative, other positive
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    rhs = BigIntHeap(isNegative: false, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: true, words: expectedWords))
+
+    // Self positive, other negative
+    lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    rhs = BigIntHeap(isNegative: true, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: true, words: expectedWords))
+
+    // Both negative
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    rhs = BigIntHeap(isNegative: true, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: expectedWords))
+  }
+
+  func test_heap_rhsLonger() {
+    let lhsWords: [Word] = [1844674407370955168]
+    let rhsWords: [Word] = [3689348814741910327, 2459565876494606880]
+    let expectedWords: [Word] = [
+      18077809192235360608, 16110156491039675065, 245956587649460688
+    ]
+
+    // Both positive
+    var lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    var rhs = BigIntHeap(isNegative: false, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: expectedWords))
+
+    // Self negative, other positive
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    rhs = BigIntHeap(isNegative: false, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: true, words: expectedWords))
+
+    // Self positive, other negative
+    lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    rhs = BigIntHeap(isNegative: true, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: true, words: expectedWords))
+
+    // Both negative
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    rhs = BigIntHeap(isNegative: true, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: expectedWords))
+  }
+
+  func test_heap_bothMultipleWords() {
+    let lhsWords: [Word] = [1844674407370955168, 4304240283865562048]
+    let rhsWords: [Word] = [3689348814741910327, 2459565876494606880]
+    let expectedWords: [Word] = [
+      18077809192235360608, 6640827866535438585, 11600952384132895787, 573898704515408272
+    ]
+
+    // Both positive
+    var lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    var rhs = BigIntHeap(isNegative: false, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: expectedWords))
+
+    // Self negative, other positive
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    rhs = BigIntHeap(isNegative: false, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: true, words: expectedWords))
+
+    // Self positive, other negative
+    lhs = BigIntHeap(isNegative: false, words: lhsWords)
+    rhs = BigIntHeap(isNegative: true, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: true, words: expectedWords))
+
+    // Both negative
+    lhs = BigIntHeap(isNegative: true, words: lhsWords)
+    rhs = BigIntHeap(isNegative: true, words: rhsWords)
+    lhs.mul(other: rhs)
+    XCTAssertEqual(lhs, BigIntHeap(isNegative: false, words: expectedWords))
+  }
+
+  // MARK: - Heap - Carry overflow
+
+  func test_heap_carryOverflow() {
+    // Case 1
+    // lowIndex 0
+    //   high, low = 18446744073709551615 * 18446744073709551615 = 18446744073709551614 1
+    //   carry, result[i] = current[i] + low + current carry = 0 1 0 = 0 1
+    //   next carry = carry + high = 0 + 18446744073709551614 = 18446744073709551614
+    //
+    // lowIndex 1
+    //   high, low = 18446744073709551615 * 18446744073709551615 = 18446744073709551614 1
+    //   carry, result[i] = current[i] + low + current carry = 0 1 18446744073709551614 = 0 18446744073709551615
+    //   next carry = carry + high = 0 + 18446744073709551614 = 18446744073709551614
+    //   ^^^^^^^^^^ no overflow here!
+    do {
+      var lhs = BigIntHeap(isNegative: false, words: .max, .max, .max)
+      let rhs = BigIntHeap(isNegative: false, words: .max, .max)
+      lhs.mul(other: rhs)
+    }
+
+    // Case 2
+    // lowIndex 0
+    //   high, low = 18446744073709551615 * 18446744073709551614 = 18446744073709551613 2
+    //   carry, result[i] = current[i] + low + current carry = 0 2 0 = 0 2
+    //   next carry = carry + high = 0 + 18446744073709551613 = 18446744073709551613
+    //
+    // lowIndex 1
+    //   high, low = 18446744073709551615 * 18446744073709551615 = 18446744073709551614 1
+    //   carry, result[i] = current[i] + low + current carry = 0 1 18446744073709551613 = 0 18446744073709551614
+    //   next carry = carry + high = 0 + 18446744073709551614 = 18446744073709551614
+    //   ^^^^^^^^^^ no overflow here!
+    do {
+      var lhs = BigIntHeap(isNegative: false, words: .max, .max, .max)
+      let rhs = BigIntHeap(isNegative: false, words: .max - 1, .max)
+      lhs.mul(other: rhs)
+    }
+
+    // Case 3
+    // lowIndex 0
+    //   high, low = 18446744073709551615 * 18446744073709551615 = 18446744073709551614 1
+    //   carry, result[i] = current[i] + low + current carry = 0 1 0 = 0 1
+    //   next carry = carry + high = 0 + 18446744073709551614 = 18446744073709551614
+    //
+    // lowIndex 1
+    //   high, low = 18446744073709551615 * 18446744073709551614 = 18446744073709551613 2
+    //   carry, result[i] = current[i] + low + current carry = 0 2 18446744073709551614 = 1 0
+    //   next carry = carry + high = 1 + 18446744073709551613 = 18446744073709551614
+    //   ^^^^^^^^^^ no overflow here!
+    do {
+      var lhs = BigIntHeap(isNegative: false, words: .max, .max, .max)
+      let rhs = BigIntHeap(isNegative: false, words: .max, .max - 1)
+      lhs.mul(other: rhs)
     }
   }
 }

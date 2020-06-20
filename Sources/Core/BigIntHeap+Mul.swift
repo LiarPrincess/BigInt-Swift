@@ -134,6 +134,7 @@ extension BigIntHeap {
   internal static func mulMagnitude(lhs: inout BigIntStorage, rhs: BigIntStorage) {
     let resultCount = lhs.count + rhs.count
     var result = BigIntStorage(repeating: 0, count: resultCount)
+    result.isNegative = lhs.isNegative
 
     // We will use 'smaller' for inner loop in hope that it will generate
     // smaller pressure on registers.
@@ -143,10 +144,6 @@ extension BigIntHeap {
       var carry = Word.zero
       let biggerWord = bigger[biggerIndex]
 
-      if biggerWord.isZero {
-        continue
-      }
-
       for smallerIndex in 0..<smaller.count {
         let smallerWord = smaller[smallerIndex]
         let resultIndex = biggerIndex + smallerIndex
@@ -154,8 +151,8 @@ extension BigIntHeap {
         let (high, low) = biggerWord.multipliedFullWidth(by: smallerWord)
         (carry, result[resultIndex]) = result[resultIndex].addingFullWidth(low, carry)
 
-        // TODO: Unit test for lack of overflow (99 99 99 * 99 99)
         // Let's deal with 'high' in the next iteration.
+        // No overflow possible (we have unit test for this).
         carry += high
       }
 
