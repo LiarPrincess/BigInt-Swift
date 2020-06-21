@@ -1,5 +1,3 @@
-// swiftlint:disable function_body_length
-
 extension BigIntHeap {
 
   // MARK: - Sign
@@ -55,7 +53,6 @@ extension BigIntHeap {
     // Remainder is always less than the number we divide by.
     // So even if we divide by min value (for example for 'Int8' it is -128),
     // the max possible remainder (127) is still representable in given type.
-    assert(wordRemainder.isNegative == remainderIsNegative)
     let unsignedRemainder = Smi.Storage(wordRemainder.magnitude)
     return remainderIsNegative ? -unsignedRemainder : unsignedRemainder
   }
@@ -107,33 +104,20 @@ extension BigIntHeap {
                               magnitude: unsignedRemainder)
 
     case .greater:
-      let unsignedRemainder: Word = {
-        // If 'smaller' is a power of 2 -> we can just shift right
-        let otherLSB = other.trailingZeroBitCount
-        let isOtherPowerOf2 = (other >> otherLSB) == 1
-        if isOtherPowerOf2 {
-          // Remainder - part we are 'chopping' off
-          // (just like in Overcooked: chop, chop, chop)
-          let remainderMask = ~(Word.max << otherLSB)
-          let remainder = self.storage[0] & remainderMask
-          self.shiftRight(count: otherLSB.magnitude)
-          return remainder
-        }
+      // Shifting right when 'other' is power of 2
+      // would not work for negative numbers.
 
-        var carry = Word.zero
-        for i in (0..<self.storage.count).reversed() {
-          let x = (high: carry, low: self.storage[i])
-          (self.storage[i], carry) = other.dividingFullWidth(x)
-        }
-
-        return carry
-      }()
+      var carry = Word.zero
+      for i in (0..<self.storage.count).reversed() {
+        let x = (high: carry, low: self.storage[i])
+        (self.storage[i], carry) = other.dividingFullWidth(x)
+      }
 
       self.storage.isNegative = resultIsNegative
       self.fixInvariants()
 
       return DivWordRemainder(isNegative: remainderIsNegative,
-                              magnitude: unsignedRemainder)
+                              magnitude: carry)
     }
   }
 
@@ -143,8 +127,12 @@ extension BigIntHeap {
     return BigIntHeap()
   }
 
+// swiftlint:disable function_body_length
+
   /// Returns remainder.
   internal mutating func div(other: BigIntHeap) -> BigIntHeap {
+// swiftlint:enable function_body_length
+
     defer { self.checkInvariants() }
 
     // Special case: other is '0', '1' or '-1'

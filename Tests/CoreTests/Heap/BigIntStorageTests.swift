@@ -286,7 +286,7 @@ class BigIntStorageTests: XCTestCase {
     let orginal = BigIntStorage(isNegative: false, words: initialWords)
 
     var copy = orginal
-    copy.dropFirst(3)
+    copy.dropFirst(wordCount: 3)
 
     XCTAssertEqual(orginal.count, initialWords.count)
 

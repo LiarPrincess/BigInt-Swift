@@ -25,24 +25,18 @@ class BigIntHeapMulTests: XCTestCase {
   // MARK: - Smi - 0
 
   func test_smi_otherZero() {
-    let expectedZero = BigIntHeap()
-
     for p in generateHeapValues(countButNotReally: 100) {
       var value = p.create()
       value.mul(other: smiZero)
-
-      XCTAssertEqual(value, expectedZero)
+      XCTAssert(value.isZero)
     }
   }
 
   func test_smi_selfZero() {
-    let expectedZero = BigIntHeap()
-
     for smi in generateSmiValues(countButNotReally: 100) {
       var value = BigIntHeap()
       value.mul(other: smi)
-
-      XCTAssertEqual(value, expectedZero)
+      XCTAssert(value.isZero)
     }
   }
 
@@ -98,7 +92,7 @@ class BigIntHeapMulTests: XCTestCase {
 
   // MARK: - Smi pow 2
 
-  /// Mul by power of `n^2` should shift left by `n`
+  /// Mul by `n^2` should shift left by `n`
   func test_smi_otherIsPowerOf2() {
     for p in generateHeapValues(countButNotReally: 100) {
       if p.isZero {
@@ -106,9 +100,10 @@ class BigIntHeapMulTests: XCTestCase {
       }
 
       for power in powersOf2 {
-        guard self.canBeShiftedWithoutOverflows(words: p.words, power: power) else {
-          continue
-        }
+        guard let p = self.cleanBitsSoItCanBeMultipliedWithoutOverflow(
+          value: p,
+          power: power
+        ) else { continue }
 
         var value = p.create()
         value.mul(other: Smi.Storage(power.value))
@@ -120,9 +115,21 @@ class BigIntHeapMulTests: XCTestCase {
     }
   }
 
-  private func canBeShiftedWithoutOverflows(words: [Word], power: Pow2) -> Bool {
-    let maxBeforeShift = 1 << (Word.bitWidth - power.n)
-    return words.allSatisfy { $0 < maxBeforeShift }
+  private func cleanBitsSoItCanBeMultipliedWithoutOverflow(
+    value: HeapPrototype,
+    power: Pow2
+  ) -> HeapPrototype? {
+    // 1111 >> 1 = 1110
+    let mask = Word.max >> power.n
+    let words = value.words.map { $0 & mask }
+
+    // Zero may behave differently than other numbers
+    let allWordsZero = words.allSatisfy { $0.isZero }
+    if allWordsZero {
+      return nil
+    }
+
+    return HeapPrototype(isNegative: value.isNegative, words: words)
   }
 
   // MARK: - Smi - Self has multiple words
@@ -182,25 +189,20 @@ class BigIntHeapMulTests: XCTestCase {
 
   func test_heap_otherZero() {
     let zero = BigIntHeap()
-    let expectedZero = BigIntHeap()
 
     for p in generateHeapValues(countButNotReally: 100) {
       var value = p.create()
       value.mul(other: zero)
-
-      XCTAssertEqual(value, expectedZero)
+      XCTAssert(value.isZero)
     }
   }
 
   func test_heap_selfZero() {
-    let expectedZero = BigIntHeap()
-
     for p in generateHeapValues(countButNotReally: 100) {
       var value = BigIntHeap()
       let other = p.create()
       value.mul(other: other)
-
-      XCTAssertEqual(value, expectedZero)
+      XCTAssert(value.isZero)
     }
   }
 
@@ -257,7 +259,7 @@ class BigIntHeapMulTests: XCTestCase {
 
   // MARK: - Smi pow 2
 
-  /// Mul by power of `n^2` should shift left by `n`
+  /// Mul by `n^2` should shift left by `n`
   func test_heap_otherIsPowerOf2() {
     for p in generateHeapValues(countButNotReally: 100) {
       if p.isZero {
@@ -265,9 +267,10 @@ class BigIntHeapMulTests: XCTestCase {
       }
 
       for power in powersOf2 {
-        guard self.canBeShiftedWithoutOverflows(words: p.words, power: power) else {
-          continue
-        }
+        guard let p = self.cleanBitsSoItCanBeMultipliedWithoutOverflow(
+          value: p,
+          power: power
+        ) else { continue }
 
         var value = p.create()
         let other = BigIntHeap(power.value)
