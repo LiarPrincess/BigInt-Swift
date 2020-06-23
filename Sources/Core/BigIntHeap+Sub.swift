@@ -31,6 +31,8 @@ extension BigIntHeap {
     self.subSameSign(other: word)
   }
 
+  // MARK: - Word
+
   internal mutating func sub(other: Word) {
     // Different sign: 'self' negative, 'other' positive: -1 - 2
     if self.isNegative {

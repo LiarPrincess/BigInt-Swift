@@ -4,9 +4,26 @@ extension BigIntHeap {
 
   // TODO: Recheck all of the uses of 'checkInvariants'
   internal mutating func mul(other: Smi.Storage) {
-    defer { self.checkInvariants() }
+    if other == -1 {
+      self.negate()
+      return
+    }
 
-    // Special cases for 'other': 0, 1, -1
+    // If the signs are the same then we are positive.
+    // '1 * 2 = 2' and also '(-1) * (-2) = 2'
+    let resultIsNegative = self.isNegative != other.isNegative
+
+    let word = Word(other.magnitude)
+    self.mul(other: word)
+
+    self.storage.isNegative = resultIsNegative
+    self.fixInvariants()
+  }
+
+  // MARK: - Word
+
+  internal mutating func mul(other: Word) {
+    // Special cases for 'other': 0, 1
     if other.isZero {
       self.storage.setToZero()
       return
@@ -16,33 +33,25 @@ extension BigIntHeap {
       return
     }
 
-    if other == -1 {
-      self.negate()
-      return
-    }
-
     // Special cases for 'self': 0, 1, -1:
     if self.isZero {
       return
     }
 
+    // Sign stays the same: 1 * x = x, -1 * x = -x (we know that x > 0)
+    let preserveIsNegative = self.isNegative
+
     if self.hasMagnitudeOfOne {
-      // If we are negative then result should have opposite sign than 'other'.
-      // Remember to cast 'other' to 'Int' before changing sign,
-      // because '-Smi.Storage.min' overflows.
-      let value = self.isNegative ? -Int(other) : Int(other)
-      self.storage.set(to: value)
+      self.storage.set(to: other)
+      self.storage.isNegative = preserveIsNegative
+      self.fixInvariants()
       return
     }
 
     // And finally non-special case:
-    // Just using '-' may overflow!
-    let word = Word(other.magnitude)
-    Self.mulMagnitude(lhs: &self.storage, rhs: word)
+    Self.mulMagnitude(lhs: &self.storage, rhs: other)
 
-    // If the signs are the same then we are positive.
-    // '1 * 2 = 2' and also (-1) * (-2) = 2
-    self.storage.isNegative = self.isNegative != other.isNegative
+    self.storage.isNegative = preserveIsNegative
     self.fixInvariants()
   }
 

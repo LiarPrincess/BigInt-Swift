@@ -90,7 +90,7 @@ class BigIntHeapMulTests: XCTestCase {
     }
   }
 
-  // MARK: - Smi pow 2
+  // MARK: - Smi - pow 2
 
   /// Mul by `n^2` should shift left by `n`
   func test_smi_otherIsPowerOf2() {
@@ -257,7 +257,7 @@ class BigIntHeapMulTests: XCTestCase {
     }
   }
 
-  // MARK: - Smi pow 2
+  // MARK: - Heap - pow 2
 
   /// Mul by `n^2` should shift left by `n`
   func test_heap_otherIsPowerOf2() {
