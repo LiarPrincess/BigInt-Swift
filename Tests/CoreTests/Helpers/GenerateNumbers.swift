@@ -58,12 +58,16 @@ internal struct HeapPrototype {
   internal let isNegative: Bool
   internal let words: [BigIntStorage.Word]
 
+  internal var isPositive: Bool {
+    return !self.isNegative
+  }
+
   internal var isZero: Bool {
     return self.words.isEmpty
   }
 
-  internal var isPositive: Bool {
-    return !self.isNegative
+  internal var hasMagnitudeOfOne: Bool {
+    return self.words.count == 1 && self.words[0] == 1
   }
 
   internal func create() -> BigIntHeap {

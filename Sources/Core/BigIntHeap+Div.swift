@@ -1,4 +1,14 @@
 // swiftlint:disable file_length
+// TODO: Test: (x << 2) >> 2 == x and (x * 2) / 2 = x + rem
+
+// Sources:
+// - V8 (google-javascript-thingie): 'src/objects/bigint.cc'
+// - Knuth "The Art of Computer Programming vol 2" - 4.3.1 - Algorithm D
+//
+// Seriously look both of the sources!
+// They are really good and very accessible.
+// V8 implements exactly the "Algorithm D" without any noise/weirdness.
+// Their implementation is AMAZING.
 
 extension BigIntHeap {
 
@@ -22,12 +32,14 @@ extension BigIntHeap {
   // In Python remainder sign acts a bit differently.
 
   /// If the signs are the same then result is positive:
-  /// `2/1 = 2` and also `(-2)*(-1) = 2`
+  /// `2/1 = 2` and also `(-2)/(-1) = 2`
   private func divIsNegative(otherIsNegative: Bool) -> Bool {
     return self.isNegative != otherIsNegative
   }
 
   /// Remainder will have the same sign as we have now.
+  ///
+  /// (It will ignore the argument, but we want symmetry with `divIsNegative`)
   private func modIsNegative(otherIsNegative: Bool) -> Bool {
     return self.isNegative
   }
@@ -59,6 +71,8 @@ extension BigIntHeap {
     return remainderIsNegative ? -unsignedRemainder : unsignedRemainder
   }
 
+  // MARK: - Word
+
   internal struct DivWordRemainder {
 
     internal let isNegative: Bool
@@ -72,8 +86,6 @@ extension BigIntHeap {
       return DivWordRemainder(isNegative: false, magnitude: 0)
     }
   }
-
-  // MARK: - Word
 
   /// Returns remainder.
   internal mutating func div(other: Word) -> DivWordRemainder {
@@ -176,12 +188,11 @@ extension BigIntHeap {
       // Basically return 'self' as remainder
       // We have to do a little dance to avoid COW.
       var remainder = self
-      self.storage.setToZero() // Will use predefined 'BigIntStorage.zero' (COW)
-      remainder.storage.isNegative = remainderIsNegative
+      self.storage.setToZero() // Will use predefined 'BigIntStorage.zero'
+      remainder.storage.isNegative = remainderIsNegative // No COW here
       return remainder
 
     case .greater:
-      // Oh no! We have to implement proper div logic!
       var remainder = Self.divMagnitude(dividend: &self, divisor: other)
 
       self.storage.isNegative = resultIsNegative
@@ -193,11 +204,13 @@ extension BigIntHeap {
     }
   }
 
+  // MARK: - Oh no! We have to implement proper div logic!
+
 // swiftlint:disable function_body_length
 
   /// Returns remainder.
   ///
-  /// Based on implementation in 'V8': 'src/objects/bigint.cc'.
+  /// See Knuth (seriously, do it).
   ///
   /// Will NOT look at the sign of any of those numbers!
   /// Only at the magnitude.
@@ -223,7 +236,7 @@ extension BigIntHeap {
     // D1.
     // Left-shift inputs so that the divisor's MSB is '1'.
     // Note that: 'a / b = (a * n) / (b * n)'
-    let shift = divisor.storage[divisor.storage.count].leadingZeroBitCount
+    let shift = divisor.storage[divisor.storage.count - 1].leadingZeroBitCount
 
     /// This is the correct value that should be used during calculation!
     let shiftedDivisor = Self.specialLeftShift(value: divisor.storage,
@@ -238,7 +251,7 @@ extension BigIntHeap {
 
     // Preparations before loop:
 
-    // We no longer need 'dividend' since we will be using 'remainder',
+    // We no longer need 'dividend', since we will be using 'remainder',
     // for actual division. We will use it to accumulate result instead.
     dividend.storage.transformEveryWord { _ in 0 }
     // In each iteration we will be divising 'remainderHighWords' by 'divisorHighWords'
@@ -248,7 +261,7 @@ extension BigIntHeap {
     // so that we do not have to allocate on every iteration.
     var mulBuffer = BigIntStorage(minimumCapacity: n + 1)
 
-    // D2.
+    // D2. D7.
     // Iterate over the dividend's digit (like the 'grad school' algorithm).
     for j in stride(from: m, through: 0, by: -1) {
       // D3.
@@ -259,7 +272,7 @@ extension BigIntHeap {
       var quotientGuess = Self.approximateQuotient(dividing: remainderHighWords,
                                                    by: divisorHighWords)
 
-      // D4.
+      // D4. D5. D6.
       // Multiply the divisor with the current quotient digit,
       // and subtract it from the dividend.
       // If there was 'borrow', then the quotient digit was '1' too high,
@@ -278,6 +291,7 @@ extension BigIntHeap {
     // 'dividend' holds the result
     dividend.fixInvariants()
 
+    // D8.
     // Undo the 'specialLeftShift' from the start of this function
     Self.specialRightShift(value: &remainder, shift: shift)
     remainder.fixInvariants()
@@ -286,33 +300,32 @@ extension BigIntHeap {
 
   // MARK: - Heap - Approximate quotient
 
+  /// See Knuth.
   private static func approximateQuotient(
-    dividing x: (Word, Word, Word), // swiftlint:disable:this large_tuple
-    by y: (Word, Word)
+    dividing u: (Word, Word, Word), // swiftlint:disable:this large_tuple
+    by v: (Word, Word)
   ) -> Word {
-    // 601 / 61 = 10 = Word.max (Word = decimal in this case)
-    if x.0 == y.0 {
+    // 601 / 61 = ~10 = 9 = Word.max (we have decimal words)
+    if u.0 == v.0 {
       return Word.max
     }
 
-    // Divide 2 highest digits of 'x' by highest digit of 'y'
-    var (high, low) = y.0.dividingFullWidth((x.0, x.1))
+    // Divide 2 highest digits of 'u' by highest digit of 'v'
+    var (q, remainder) = v.0.dividingFullWidth((u.0, u.1))
 
-    // Decrement the quotient estimate as needed by looking at the next
-    // digit, i.e. by testing whether
-    // high * y.1 > (low << Word.bitWidth) + x.2
-    while Self.productGreaterThan(factor1: high, factor2: y.1, high: low, low: x.2) {
-      high -= 1
-      let oldLow = low
-      low += y.0
+    // Decrement the quotient estimate as needed by looking at the next digit
+    while Self.productGreaterThan(factor1: v.1, factor2: q, high: remainder, low: u.2) {
+      q -= 1
 
-      // v[n-1] >= 0, so this tests for overflow.
-      if low < oldLow {
+      let (value, overflow) = remainder.addingReportingOverflow(v.0)
+      remainder = value
+
+      if overflow {
         break
       }
     }
 
-    return high
+    return q
   }
 
   /// Returns whether `(factor1 * factor2) > (high << kDigitBits) + low`.
@@ -377,7 +390,7 @@ extension BigIntHeap {
                                  rhs: BigIntStorage,
                                  startIndex: Int) -> Word {
     var carry: Word = 0
-    for i in 0..<lhs.count {
+    for i in 0..<rhs.count {
       let (word1, overflow1) = lhs[startIndex + i].addingReportingOverflow(rhs[i])
       let (word2, overflow2) = word1.addingReportingOverflow(carry)
 
@@ -395,9 +408,8 @@ extension BigIntHeap {
   private static func inplaceSub(lhs: inout BigIntStorage,
                                  rhs: BigIntStorage,
                                  startIndex: Int) -> Word {
-    // TODO: In 'sub' rename 'carry' to borrow
     var borrow: Word = 0
-    for i in 0..<lhs.count {
+    for i in 0..<rhs.count {
       let (word1, borrow1) = lhs[startIndex + i].subtractingReportingOverflow(rhs[i])
       let (word2, borrow2) = word1.subtractingReportingOverflow(borrow)
 
