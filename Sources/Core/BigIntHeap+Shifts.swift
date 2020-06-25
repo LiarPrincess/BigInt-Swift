@@ -1,4 +1,9 @@
-// Some of the code was taken from mini-gmp: https://gmplib.org
+// Sources:
+// - mini-gmp: https://gmplib.org
+//
+// Mostly for right shift.
+// The person that wrote it is a AMAZING...
+//
 // GMP function name is in the comment above method.
 
 extension BigIntHeap {

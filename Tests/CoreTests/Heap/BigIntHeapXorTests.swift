@@ -51,23 +51,19 @@ class BigIntHeapXorTests: XCTestCase {
 
     // Both positive
     var lhs = BigIntHeap(isNegative: false, words: lhsWords)
-    print(lhs)
     lhs.xor(other: rhs)
-
     var expected = BigIntHeap(isNegative: false, words: [3689348814506778775, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
 
     // Self negative, other positive
     lhs = BigIntHeap(isNegative: true, words: lhsWords)
     lhs.xor(other: rhs)
-
     expected = BigIntHeap(isNegative: true, words: [3689348814506778775, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
 
     // Self positive, other negative
     lhs = BigIntHeap(isNegative: false, words: lhsWords)
     lhs.xor(other: -rhs)
-
     expected = BigIntHeap(isNegative: true, words: [3689348814506778793, 2459565876494606880])
     XCTAssertEqual(lhs, expected)
 

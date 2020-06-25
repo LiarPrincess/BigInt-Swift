@@ -62,6 +62,7 @@ internal struct BigIntHeap: Equatable, Hashable {
     self.storage = .zero
   }
 
+  // TODO: Remove this
   internal init(minimumStorageCapacity: Int) {
     self.storage = BigIntStorage(minimumCapacity: minimumStorageCapacity)
   }

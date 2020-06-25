@@ -143,20 +143,20 @@ extension BigIntHeap {
       return
     }
 
-    var carry: Word = 0
+    var borrow: Word = 0
     for i in 0..<smaller.count {
-      (carry, bigger[i]) = bigger[i].subtractingFullWidth(smaller[i], carry)
+      (borrow, bigger[i]) = bigger[i].subtractingFullWidth(smaller[i], borrow)
     }
 
     for i in smaller.count..<bigger.count {
-      if carry == 0 {
+      if borrow == 0 {
         break
       }
 
-      (carry, bigger[i]) = bigger[i].subtractingFullWidth(carry)
+      (borrow, bigger[i]) = bigger[i].subtractingFullWidth(borrow)
     }
 
-    guard carry == 0 else {
+    guard borrow == 0 else {
       trap("subMagnitude: bigger < smaller")
     }
   }

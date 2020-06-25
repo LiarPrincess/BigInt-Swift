@@ -130,15 +130,15 @@ extension BigIntHeap {
   ///
   /// We will be using school algorithm (`complexity: O(n^2)`):
   /// ```
-  ///      2013 <- lhs
-  ///    * 2019 <- rhs
+  ///      2013 <- bigger
+  ///    * 2019 <- smaller
   ///    ------
-  ///     18117 <- this is row (lhs: 2013, rhs: 9)
+  ///     18117 <- inner loop for 'smallerWord = 9'
   ///     2013
   ///       0
   /// + 4026
   /// ---------
-  ///   4064247 <- this is acc
+  ///   4064247 <- this is result
   /// ```.
   internal static func mulMagnitude(lhs: inout BigIntStorage, rhs: BigIntStorage) {
     let resultCount = lhs.count + rhs.count
