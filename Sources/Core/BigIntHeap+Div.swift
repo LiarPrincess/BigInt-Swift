@@ -238,13 +238,13 @@ extension BigIntHeap {
     // Note that: 'a / b = (a * n) / (b * n)'
     let shift = divisor.storage[divisor.storage.count - 1].leadingZeroBitCount
 
-    /// This is the correct value that should be used during calculation!
+    // This is the correct value that should be used during calculation!
     let shiftedDivisor = Self.specialLeftShift(value: divisor.storage,
                                                shift: shift,
                                                mode: .sameSizeResult)
 
-    /// Holds the (continuously updated) remaining part of the dividend,
-    /// which eventually becomes the remainder.
+    // Holds the (continuously updated) remaining part of the dividend,
+    // which eventually becomes the remainder.
     var remainder = Self.specialLeftShift(value: dividend.storage,
                                           shift: shift,
                                           mode: .alwaysAddOneDigit)

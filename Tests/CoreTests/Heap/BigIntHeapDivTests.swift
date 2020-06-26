@@ -1,7 +1,6 @@
 import XCTest
 @testable import Core
 
-// swiftlint:disable line_length
 // swiftlint:disable number_separator
 // swiftlint:disable file_length
 
