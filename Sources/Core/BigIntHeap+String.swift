@@ -23,50 +23,20 @@ extension BigIntHeap: CustomStringConvertible {
       return "0"
     }
 
+    if self.isPowerOf2(value: radix) {
+      return self.radixIsPowerOfTwo(radix: radix, uppercase: uppercase)
+    }
+
     if self.storage.count == 1 {
       let word = self.storage[0]
       let wordString = String(word, radix: radix, uppercase: uppercase)
-      return self.sign + wordString
+      return self.signString + wordString
     }
 
-    if self.isPowerOf2(value: radix) {
-      return self.toStringRadixPowerOfTwo(radix: radix, uppercase: uppercase)
-    }
-
-    var selfCopy = self
-    if selfCopy.isNegative {
-      selfCopy.negate()
-    }
-
-    // TODO: Do something with this
-
-    var parts = [String]()
-    let (scalarCountPerWord, power) = BigInt.scalarsPerWord(radix: radix)
-
-    while !selfCopy.isZero {
-      let remainder = selfCopy.div(other: power)
-      assert(remainder.isPositive)
-      parts.append(String(remainder.magnitude, radix: radix, uppercase: uppercase))
-    }
-
-    assert(!parts.isEmpty)
-
-    var result = self.sign
-    for (index, part) in parts.reversed().enumerated() {
-      // Insert leading zeroes for mid-Words
-      if index != 0 {
-        let count = scalarCountPerWord - part.count
-        assert(count >= 0) // swiftlint:disable:this empty_count
-        result.append(String(repeating: "0", count: count))
-      }
-
-      result.append(part)
-    }
-
-    return result
+    return self.generic(radix: radix, uppercase: uppercase)
   }
 
-  private var sign: String {
+  private var signString: String {
     return self.isNegative ? "-" : ""
   }
 
@@ -77,7 +47,7 @@ extension BigIntHeap: CustomStringConvertible {
   // MARK: - Radix is power of 2
 
   // swiftlint:disable:next function_body_length
-  private func toStringRadixPowerOfTwo(radix: Int, uppercase: Bool) -> String {
+  private func radixIsPowerOfTwo(radix: Int, uppercase: Bool) -> String {
     assert(!self.isZero)
 
     let characterSet = uppercase ? uppercaseDigits : lowercaseDigits
@@ -109,7 +79,7 @@ extension BigIntHeap: CustomStringConvertible {
       return self.storage.count * Word.bitWidth - totalCharCount * bitsPerChar
     }()
 
-    var result = self.sign
+    var result = self.signString
     for i in stride(from: self.storage.count - 1, through: 0, by: -1) {
       let word = self.storage[i]
 
@@ -148,5 +118,62 @@ extension BigIntHeap: CustomStringConvertible {
 
     assert(alreadyProcessedBitCount == 0)
     return result
+  }
+
+  // MARK: - Generic
+
+  private func generic(radix: Int, uppercase: Bool) -> String {
+    var selfCopy = self
+    if selfCopy.isNegative {
+      selfCopy.negate()
+    }
+
+    /// Remainders from division by 'radix' (well, actually by 'power')
+    var remainders = [Word]()
+    let (scalarCountPerWord, power) = self.scalarsPerWord(radix: radix)
+
+    while !selfCopy.isZero {
+      let remainder = selfCopy.div(other: power)
+      assert(remainder.isPositive)
+      remainders.append(remainder.magnitude)
+    }
+
+    assert(!remainders.isEmpty)
+
+    var result = self.signString
+    for (index, remainder) in remainders.reversed().enumerated() {
+      let s = String(remainder, radix: radix, uppercase: uppercase)
+
+      // Insert leading zeroes for mid-Words
+      if index != 0 {
+        let count = scalarCountPerWord - s.count
+        assert(count >= 0) // swiftlint:disable:this empty_count
+        result.append(String(repeating: "0", count: count))
+      }
+
+      result.append(s)
+    }
+
+    return result
+  }
+
+  /// Calculates the number of scalars that fits inside a single `Word`
+  /// (for a given `radix`).
+  ///
+  /// Returns the highest number that satisfy `radix^n <= 2^Word.bitWidth`
+  private func scalarsPerWord(radix: Int) -> (n: Int, power: Word) {
+    var n = 1
+    var power = Word(radix)
+
+    while true {
+      let (newPower, overflow) = power.multipliedReportingOverflow(by: Word(radix))
+
+      if overflow {
+        return (n, power)
+      }
+
+      n += 1
+      power = newPower
+    }
   }
 }
