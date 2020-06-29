@@ -1,3 +1,5 @@
+// MARK: - Bin
+
 internal func bin(_ value: Int32) -> String {
   return bin(UInt32(bitPattern: value))
 }
@@ -14,6 +16,8 @@ internal func bin(_ value: UInt) -> String {
   return String(value, radix: 2, uppercase: false)
 }
 
+// MARK: - Trap
+
 // swiftlint:disable:next unavailable_function
 public func trap(_ msg: String,
                  file: StaticString = #file,
@@ -21,6 +25,8 @@ public func trap(_ msg: String,
                  line: Int = #line) -> Never {
   fatalError("\(file):\(line) - \(msg)")
 }
+
+// MARK: - BinaryInteger + predicates
 
 extension BinaryInteger {
 
@@ -37,6 +43,8 @@ extension BinaryInteger {
     return self < .zero
   }
 }
+
+// MARK: - FixedWidthInteger + full width
 
 extension FixedWidthInteger {
 
@@ -85,7 +93,46 @@ extension FixedWidthInteger {
     let borrow: Self = (overflow1 ? 1 : 0) + (overflow2 ? 1 : 0)
     return (borrow, xyz)
   }
+
+  /// Returns the highest number that satisfy `radix^n <= 2^Self.bitWidth`
+  internal static func maxRepresentablePower(of radix: Int) -> (n: Int, power: Self) {
+    var n = 1
+    var power = Self(radix)
+
+    while true {
+      let (newPower, overflow) = power.multipliedReportingOverflow(by: Self(radix))
+
+      if overflow {
+        return (n, power)
+      }
+
+      n += 1
+      power = newPower
+    }
+  }
 }
+
+// MARK: - UInt + as Smi
+
+extension UInt {
+
+  internal func asSmiIfPossible(isNegative: Bool) -> Smi.Storage? {
+    let isPositive = !isNegative
+
+    if isPositive && self <= Smi.Storage.max {
+      return Smi.Storage(self)
+    }
+
+    if isNegative && self <= Smi.Storage.min.magnitude {
+      let int = Int(self)
+      return Smi.Storage(-int)
+    }
+
+    return nil
+  }
+}
+
+// MARK: - UnicodeScalar + asDigit
 
 extension UnicodeScalar {
 

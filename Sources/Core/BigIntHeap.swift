@@ -76,6 +76,7 @@ internal struct BigIntHeap: Equatable, Hashable {
 
   internal init(storage: BigIntStorage) {
     self.storage = storage
+    self.fixInvariants()
   }
 
   // MARK: - Invariants
@@ -101,18 +102,10 @@ internal struct BigIntHeap: Equatable, Hashable {
     }
 
     let word = self.storage[0]
-
-    if self.isPositive {
-      return Smi(word)
+    if let storage = word.asSmiIfPossible(isNegative: self.isNegative) {
+      return Smi(storage)
     }
 
-    let max = Smi.Storage.min.magnitude
-    guard word <= max else {
-      return nil
-    }
-
-    // We are in a 'Smi.Storage' range, which also means that we are in 'Int' range
-    let signed = -Int(word)
-    return Smi(signed)
+    return nil
   }
 }

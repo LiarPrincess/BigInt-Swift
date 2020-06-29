@@ -150,8 +150,8 @@ class BigIntHeapTwoComplementTests: XCTestCase {
       let complement = value.asTwoComplement()
 
       let expectedWords = words + [0]
-      let expected = BigIntHeap(isNegative: false, words: expectedWords)
-      XCTAssertEqual(complement, expected.storage, "\(complement) vs \(expected)")
+      let expected = BigIntStorage(isNegative: false, words: expectedWords)
+      XCTAssertEqual(complement, expected, "\(complement) vs \(expected)")
     }
   }
 

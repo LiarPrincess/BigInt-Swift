@@ -10,11 +10,11 @@ extension String {
   }
 }
 
-// MARK: - Init
-
 extension BigInt {
 
-  internal typealias Word = BigIntHeap.Word
+  private typealias Word = BigIntHeap.Word
+
+  // MARK: - Error
 
   public enum ParsingError: Error {
     /// String is empty
@@ -29,9 +29,17 @@ extension BigInt {
     case notDigit(UnicodeScalar)
   }
 
-  public init(
+  // MARK: - Init
+
+  public init(_ string: String, radix: Int = 10) throws {
+    let scalars = string.unicodeScalars
+    let scalarsSub = scalars[...]
+    try self.init(scalarsSub, radix: radix)
+  }
+
+  private init(
     _ scalars: String.UnicodeScalarView.SubSequence,
-    radix: Int = 10
+    radix: Int
   ) throws {
     precondition(2 <= radix && radix <= 36, "Radix not in range 2...36.")
 
@@ -50,75 +58,77 @@ extension BigInt {
       isNegative = true
     }
 
-    // Instead of using a single 'BigInt' and multipling it by 10,
+    // Instead of using a single 'BigInt' and multipling it by 'radix',
     // we will group scalars into words-sized chunks.
     // Then we will raise those chunks to appropriate power and add together.
     //
     // For example:
     // 1_2345_6789 = (10^8 * 1) + (10^4 * 2345) + (10^0 * 6789)
     //
-    // So, we are doing most of our calculations in fast 'UInt',
+    // So, we are doing most of our calculations in fast 'Word',
     // and then we switch to slow BigInt for a few final operations.
 
-    let (scalarCountPerGroup, power) = Self.scalarsPerWord(radix: radix)
+    let (scalarCountPerGroup, power) = Word.maxRepresentablePower(of: radix)
     let radix = Word(radix)
 
-    // 'groups' are in right-to-left order!
+    // TODO: Fast path on stack
+    // Fast (on stack) path for small numbers
+    // (although it can be tricked by adding '0' in front: '0000_0001' = '1').
+    // Technically Swift compiler would also try to avoid heap allocations,
+    // by puting things on stack, but this fast path will be taken 90% of the time,
+    // so we want to be sure.
+//    if scalars.count <= scalarCountPerGroup { }
+
+    // 'groups' are in in right-to-left (lowest power first) order
+    // (just as in example ablove).
     let groups = try Self.parseGroups(
       scalars: scalars,
       radix: radix,
       scalarCountPerGroup: scalarCountPerGroup
     )
 
-    // TODO: Fast path for 'Smi' (without allocation)
-    // groups.fixInvariants()
-    // Remember sign!
+    guard let mostSignificantGroup = groups.last else {
+      trap("Unexpected empty groups")
+    }
+
+    // Fast path for 'Smi' (well... mostly for 'Smi')
+    if groups.count == 1 {
+      if let smi = mostSignificantGroup.asSmiIfPossible(isNegative: isNegative) {
+        self.init(smi: smi)
+        return
+      }
+    }
+
+    fatalError("Not implemented")
 
     var result = BigIntHeap(minimumStorageCapacity: groups.count)
+    result.storage[0] = mostSignificantGroup
     result.storage.isNegative = isNegative
 
-    for group in groups.reversed() {
+    // 'dropLast' because we already added 'mostSignificantGroup'
+    for group in groups.dropLast().reversed() {
       BigIntHeap.mulMagnitude(lhs: &result.storage, rhs: power)
       result.storage.append(group)
     }
 
+    // TODO: fix invariants
     // TODO: Call proper 'init' when we migrate to new 'HeapStorage'
 //    self.init(result)
     fatalError()
   }
 
-  /// Calculates the number of scalars that fits inside a single `Word`
-  /// (for a given `radix`).
-  ///
-  /// Returns the highest number that satisfy `radix^count <= 2^Word.bitWidth`
-  ///
-  /// `charsPerWord` in `attaswift/BigInt`.
-  internal static func scalarsPerWord(radix: Int) -> (count: Int, power: Word) {
-    var power: Word = 1
-    var overflow = false
-    var count = 0
-
-    while !overflow {
-      let (p, o) = power.multipliedReportingOverflow(by: Word(radix))
-      overflow = o
-
-      if !o || p == 0 {
-        count += 1
-        power = p
-      }
-    }
-
-    return (count, power)
-  }
+  // MARK: - Groups
 
   /// Returns groups in right-to-left order!
   private static func parseGroups(
     scalars: String.UnicodeScalarView.SubSequence,
     radix: Word,
     scalarCountPerGroup: Int
-  ) throws -> BigIntStorage {
-    let resultCount = (scalars.count / scalarCountPerGroup) + 1
-    var result = BigIntStorage(minimumCapacity: resultCount)
+  ) throws -> [Word] {
+    var result = [Word]()
+
+    let minimumCapacity = (scalars.count / scalarCountPerGroup) + 1
+    result.reserveCapacity(minimumCapacity)
 
     // Group that we are currently working on, it will be added to 'result' later
     var currentGroup = Word.zero
@@ -151,8 +161,9 @@ extension BigInt {
 
       // Prefix 'currentGroup' with current digit
       currentGroup = power * digit + currentGroup
-      // Do not move 'power *= radix' here, because it will overflow!
 
+      // Do not move 'power *= radix' here, because it will overflow!
+      // It has to be in 'else' case.
       let isLastInGroup = (index + 1).isMultiple(of: scalarCountPerGroup)
       if isLastInGroup {
         result.append(currentGroup)

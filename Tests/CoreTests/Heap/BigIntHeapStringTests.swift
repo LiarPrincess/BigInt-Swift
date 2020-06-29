@@ -47,9 +47,11 @@ class BigIntHeapStringTests: XCTestCase {
       let positiveDescription = String(describing: positive)
       XCTAssertEqual(positiveDescription, expected)
 
-      let negative = BigIntHeap(isNegative: true, words: word)
-      let negativeDescription = String(describing: negative)
-      XCTAssertEqual(negativeDescription, "-" + expected)
+      if int != 0 {
+        let negative = BigIntHeap(isNegative: true, words: word)
+        let negativeDescription = String(describing: negative)
+        XCTAssertEqual(negativeDescription, "-" + expected)
+      }
     }
   }
 

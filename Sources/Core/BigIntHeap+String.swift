@@ -130,7 +130,7 @@ extension BigIntHeap: CustomStringConvertible {
 
     /// Remainders from division by 'radix' (well, actually by 'power')
     var remainders = [Word]()
-    let (scalarCountPerWord, power) = self.scalarsPerWord(radix: radix)
+    let (scalarCountPerWord, power) = Word.maxRepresentablePower(of: radix)
 
     while !selfCopy.isZero {
       let remainder = selfCopy.div(other: power)
@@ -155,25 +155,5 @@ extension BigIntHeap: CustomStringConvertible {
     }
 
     return result
-  }
-
-  /// Calculates the number of scalars that fits inside a single `Word`
-  /// (for a given `radix`).
-  ///
-  /// Returns the highest number that satisfy `radix^n <= 2^Word.bitWidth`
-  private func scalarsPerWord(radix: Int) -> (n: Int, power: Word) {
-    var n = 1
-    var power = Word(radix)
-
-    while true {
-      let (newPower, overflow) = power.multipliedReportingOverflow(by: Word(radix))
-
-      if overflow {
-        return (n, power)
-      }
-
-      n += 1
-      power = newPower
-    }
   }
 }
