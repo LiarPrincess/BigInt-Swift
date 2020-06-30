@@ -1,6 +1,5 @@
 // swiftlint:disable file_length
 
-// TODO: Remove all 'copy'
 // TODO: We we really want every 'downgradeToSmi'?
 // TODO: In Heap 2nd smi argument should be 'Smi' (+overload)
 
@@ -205,23 +204,23 @@ public struct BigInt:
 
   public static prefix func - (value: BigInt) -> BigInt {
     switch value.value {
-    case let .smi(smi):
+    case .smi(let smi):
       return smi.negated
-    case let .heap(heap):
-      var copy = heap
-      copy.negate()
-      return BigInt(copy)
+    case .heap(var heap):
+      // 'heap' is already a copy, so we can modify it without touching 'value'
+      heap.negate()
+      return BigInt(heap)
     }
   }
 
   public prefix static func ~ (value: BigInt) -> BigInt {
     switch value.value {
-    case let .smi(smi):
+    case .smi(let smi):
       return smi.inverted
-    case let .heap(heap):
-      var copy = heap
-      copy.invert()
-      return BigInt(copy)
+    case .heap(var heap):
+      // 'heap' is already a copy, so we can modify it without touching 'value'
+      heap.invert()
+      return BigInt(heap)
     }
   }
 
@@ -232,16 +231,15 @@ public struct BigInt:
     case let (.smi(lhs), .smi(rhs)):
       return lhs.add(other: rhs)
 
-    case let (.smi(smi), .heap(heap)),
-         let (.heap(heap), .smi(smi)):
-      var copy = heap
-      copy.add(other: smi.value)
-      return BigInt(copy)
+    case (.smi(let smi), .heap(var heap)),
+         (.heap(var heap), .smi(let smi)):
+      // 'heap' is already a copy, so we can modify it without touching 'value'
+      heap.add(other: smi.value)
+      return BigInt(heap)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.add(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.add(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -251,11 +249,10 @@ public struct BigInt:
       let result = lhsSmi.add(other: rhs)
       lhs.value = result.value
 
-    case let (.smi(lhsSmi), .heap(rhs)):
+    case (.smi(let lhsSmi), .heap(var rhs)):
       // Unfortunately in this case we have to copy 'rhs'
-      var rhsCopy = rhs
-      rhsCopy.add(other: lhsSmi.value)
-      lhs.value = .heap(rhsCopy)
+      rhs.add(other: lhsSmi.value)
+      lhs.value = .heap(rhs)
       lhs.downgradeToSmiIfPossible()
 
     case (.heap(var lhsHeap), .smi(let rhs)):
@@ -279,22 +276,19 @@ public struct BigInt:
     case let (.smi(lhs), .smi(rhs)):
       return lhs.sub(other: rhs)
 
-    case let (.smi(lhs), .heap(rhs)):
+    case (.smi(let lhs), .heap(var rhs)):
       // x - y = x + (-y) = (-y) + x
-      var rhsCopy = rhs
-      rhsCopy.negate()
-      rhsCopy.add(other: lhs.value)
-      return BigInt(rhsCopy)
+      rhs.negate()
+      rhs.add(other: lhs.value)
+      return BigInt(rhs)
 
-    case let (.heap(lhs), .smi(rhs)):
-      var copy = lhs
-      copy.sub(other: rhs.value)
-      return BigInt(copy)
+    case (.heap(var lhs), .smi(let rhs)):
+      lhs.sub(other: rhs.value)
+      return BigInt(lhs)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.sub(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.sub(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -304,13 +298,12 @@ public struct BigInt:
       let result = lhsSmi.sub(other: rhs)
       lhs.value = result.value
 
-    case let (.smi(lhsSmi), .heap(rhs)):
+    case (.smi(let lhsSmi), .heap(var rhs)):
       // Unfortunately in this case we have to copy 'rhs'
       // x - y = x + (-y) = (-y) + x
-      var rhsCopy = rhs
-      rhsCopy.negate()
-      rhsCopy.add(other: lhsSmi.value)
-      lhs.value = .heap(rhsCopy)
+      rhs.negate()
+      rhs.add(other: lhsSmi.value)
+      lhs.value = .heap(rhs)
       lhs.downgradeToSmiIfPossible()
 
     case (.heap(var lhsHeap), .smi(let rhs)):
@@ -334,16 +327,14 @@ public struct BigInt:
     case let (.smi(lhs), .smi(rhs)):
       return lhs.mul(other: rhs)
 
-    case let (.smi(smi), .heap(heap)),
-         let (.heap(heap), .smi(smi)):
-      var heapCopy = heap
-      heapCopy.mul(other: smi.value)
-      return BigInt(heapCopy)
+    case (.smi(let smi), .heap(var heap)),
+         (.heap(var heap), .smi(let smi)):
+      heap.mul(other: smi.value)
+      return BigInt(heap)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.mul(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.mul(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -353,11 +344,10 @@ public struct BigInt:
       let result = lhsSmi.mul(other: rhs)
       lhs.value = result.value
 
-    case let (.smi(lhsSmi), .heap(rhs)):
+    case (.smi(let lhsSmi), .heap(var rhs)):
       // Unfortunately in this case we have to copy 'rhs'
-      var rhsCopy = rhs
-      rhsCopy.mul(other: lhsSmi.value)
-      lhs.value = .heap(rhsCopy)
+      rhs.mul(other: lhsSmi.value)
+      lhs.value = .heap(rhs)
       lhs.downgradeToSmiIfPossible() // probably not
 
     case (.heap(var lhsHeap), .smi(let rhs)):
@@ -386,15 +376,13 @@ public struct BigInt:
       _ = lhsHeap.div(other: rhs)
       return BigInt(lhsHeap)
 
-    case let (.heap(heap), .smi(smi)):
-      var heapCopy = heap
-      _ = heapCopy.div(other: smi.value)
-      return BigInt(heapCopy)
+    case (.heap(var heap), .smi(let smi)):
+      _ = heap.div(other: smi.value)
+      return BigInt(heap)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      _ = copy.div(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      _ = lhs.div(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -436,15 +424,13 @@ public struct BigInt:
       lhsHeap.mod(other: rhs)
       return BigInt(lhsHeap)
 
-    case let (.heap(heap), .smi(smi)):
-      var heapCopy = heap
-      heapCopy.mod(other: smi.value)
-      return BigInt(heapCopy)
+    case (.heap(var lhs), .smi(let rhs)):
+      lhs.mod(other: rhs.value)
+      return BigInt(lhs)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.mod(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.mod(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -517,16 +503,14 @@ public struct BigInt:
     case let (.smi(lhs), .smi(rhs)):
       return lhs.and(other: rhs)
 
-    case let (.smi(smi), .heap(heap)),
-         let (.heap(heap), .smi(smi)):
-      var heapCopy = heap
-      heapCopy.and(other: smi.value)
-      return BigInt(heapCopy)
+    case (.smi(let smi), .heap(var heap)),
+         (.heap(var heap), .smi(let smi)):
+      heap.and(other: smi.value)
+      return BigInt(heap)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.and(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.and(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -563,16 +547,14 @@ public struct BigInt:
     case let (.smi(lhs), .smi(rhs)):
       return lhs.or(other: rhs)
 
-    case let (.smi(smi), .heap(heap)),
-         let (.heap(heap), .smi(smi)):
-      var heapCopy = heap
-      heapCopy.or(other: smi.value)
-      return BigInt(heapCopy)
+    case (.smi(let smi), .heap(var heap)),
+         (.heap(var heap), .smi(let smi)):
+      heap.or(other: smi.value)
+      return BigInt(heap)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.or(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.or(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -609,16 +591,14 @@ public struct BigInt:
     case let (.smi(lhs), .smi(rhs)):
       return lhs.xor(other: rhs)
 
-    case let (.smi(smi), .heap(heap)),
-         let (.heap(heap), .smi(smi)):
-      var heapCopy = heap
-      heapCopy.xor(other: smi.value)
-      return BigInt(heapCopy)
+    case (.smi(let smi), .heap(var heap)),
+         (.heap(var heap), .smi(let smi)):
+      heap.xor(other: smi.value)
+      return BigInt(heap)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var copy = lhs
-      copy.xor(other: rhs)
-      return BigInt(copy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.xor(other: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -660,15 +640,13 @@ public struct BigInt:
       lhsHeap.shiftLeft(count: rhs)
       return BigInt(lhsHeap)
 
-    case let (.heap(lhs), .smi(rhs)):
-      var lhsCopy = lhs
-      lhsCopy.shiftLeft(count: rhs.value)
-      return BigInt(lhsCopy)
+    case (.heap(var lhs), .smi(let rhs)):
+      lhs.shiftLeft(count: rhs.value)
+      return BigInt(lhs)
 
-    case let (.heap(lhs), .heap(rhs)):
-      var lhsCopy = lhs
-      lhsCopy.shiftLeft(count: rhs)
-      return BigInt(lhsCopy)
+    case (.heap(var lhs), .heap(let rhs)):
+      lhs.shiftLeft(count: rhs)
+      return BigInt(lhs)
     }
   }
 
@@ -712,15 +690,13 @@ public struct BigInt:
      lhsHeap.shiftRight(count: rhs)
      return BigInt(lhsHeap)
 
-   case let (.heap(lhs), .smi(rhs)):
-     var lhsCopy = lhs
-     lhsCopy.shiftRight(count: rhs.value)
-     return BigInt(lhsCopy)
+   case (.heap(var lhs), .smi(let rhs)):
+     lhs.shiftRight(count: rhs.value)
+     return BigInt(lhs)
 
-   case let (.heap(lhs), .heap(rhs)):
-     var lhsCopy = lhs
-     lhsCopy.shiftRight(count: rhs)
-     return BigInt(lhsCopy)
+   case (.heap(var lhs), .heap(let rhs)):
+     lhs.shiftRight(count: rhs)
+     return BigInt(lhs)
    }
   }
 
