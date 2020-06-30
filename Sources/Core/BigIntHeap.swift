@@ -1,19 +1,3 @@
-// TODO: Remove this
-internal struct BigIntNew {
-
-  internal enum Storage {
-    case smi(Smi)
-    case heap(BigIntHeap)
-  }
-
-  internal private(set) var value: Storage
-
-  /// This will downgrade to `Smi` if possible
-  internal init(_ value: BigIntHeap) {
-    self.value = .heap(value)
-  }
-}
-
 internal struct BigIntHeap: Equatable, Hashable {
 
   internal typealias Word = BigIntStorage.Word
@@ -39,16 +23,16 @@ internal struct BigIntHeap: Equatable, Hashable {
   ///
   /// This is not one of those 'easy/fast' methods.
   /// It is only here for `BigInt.magnitude`.
-  internal var magnitude: BigIntNew {
+  internal var magnitude: BigInt {
     if self.isPositive {
-      return BigIntNew(self)
+      return BigInt(self)
     }
 
     var abs = self
     abs.negate()
     abs.checkInvariants()
     assert(abs.isPositive)
-    return BigIntNew(abs)
+    return BigInt(abs)
   }
 
   internal var hasMagnitudeOfOne: Bool {

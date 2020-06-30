@@ -16,6 +16,10 @@ extension BigIntHeap: CustomStringConvertible {
     return self.toString(radix: 10, uppercase: false)
   }
 
+  internal var debugDescription: String {
+    return self.storage.description
+  }
+
   internal func toString(radix: Int, uppercase: Bool) -> String {
     precondition(2 <= radix && radix <= 36, "Radix not in range 2...36.")
 

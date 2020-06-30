@@ -63,7 +63,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
   internal var negated: BigInt {
     // Binary numbers have bigger range on the negative side.
     if self.value == Storage.min {
-      let selfHeap = self.asHeap()
+      var selfHeap = self.asHeap()
       selfHeap.negate()
       return BigInt(selfHeap)
     }
@@ -85,8 +85,8 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
 
     // Binary numbers have bigger range on the negative side.
     if self.value == Storage.min && other.value == Storage.min {
-      let selfHeap = self.asHeap()
-      selfHeap.shiftLeft(count: 1) // * 2
+      var selfHeap = self.asHeap()
+      selfHeap.shiftLeft(count: Storage(1)) // * 2
       return BigInt(selfHeap)
     }
 
@@ -109,7 +109,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     let x = self.isNegative ? ((~result) &+ 1) : result
     let unsigned = Storage.Magnitude(bitPattern: x)
 
-    let heap = BigIntHeapOld(unsigned)
+    var heap = BigIntHeap(unsigned)
     if self.isNegative {
       heap.negate()
     }
@@ -163,7 +163,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
 
     // Heap
     let result = Int(high) << Storage.bitWidth | Int(low)
-    let heap = BigIntHeapOld(result)
+    let heap = BigIntHeap(result)
     return BigInt(heap)
   }
 
@@ -184,7 +184,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))
     let maxPlus1 = Storage.max.magnitude + 1
-    let heap = BigIntHeapOld(maxPlus1)
+    let heap = BigIntHeap(maxPlus1)
     return BigInt(heap)
   }
 
@@ -255,8 +255,8 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     }
 
     // There is no other way than to upgrade 'self' to heap
-    let selfHeap = self.asHeap()
-    selfHeap.shiftLeft(count: count)
+    var selfHeap = self.asHeap()
+    selfHeap.shiftLeft(count: Storage(count))
     return BigInt(selfHeap)
   }
 
@@ -310,7 +310,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
 
   // MARK: - As heap
 
-  private func asHeap() -> BigIntHeapOld {
-    return BigIntHeapOld(self.value)
+  private func asHeap() -> BigIntHeap {
+    return BigIntHeap(self.value)
   }
 }

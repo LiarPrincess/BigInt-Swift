@@ -1,5 +1,9 @@
 // swiftlint:disable file_length
 
+// TODO: Remove all 'copy'
+// TODO: We we really want every 'downgradeToSmi'?
+// TODO: In Heap 2nd smi argument should be 'Smi' (+overload)
+
 /// Unlimited, signed integer.
 public struct BigInt:
   SignedInteger,
@@ -10,7 +14,7 @@ public struct BigInt:
 
   internal enum Storage {
     case smi(Smi)
-    case heap(BigIntHeapOld)
+    case heap(BigIntHeap)
   }
 
   public struct Words: RandomAccessCollection {
@@ -18,7 +22,7 @@ public struct BigInt:
     // swiftlint:disable:next nesting
     private enum Inner {
       case smi(Smi.Words)
-      case heap(BigIntHeapOld.Words)
+      case heap(BigIntStorage)
     }
 
     private let inner: Inner
@@ -74,6 +78,7 @@ public struct BigInt:
   ///
   /// For example: bit width of a `Int64` instance is 64.
   public var bitWidth: Int {
+    // TODO: Check if those 2 are equal
     switch self.value {
     case let .smi(smi):
       return smi.bitWidth
@@ -102,6 +107,7 @@ public struct BigInt:
   /// 6
   /// ```
   public var minRequiredWidth: Int {
+    // TODO: Check if those 2 are equal
     switch self.value {
     case let .smi(smi):
       return smi.minRequiredWidth
@@ -132,7 +138,7 @@ public struct BigInt:
     if let smi = Smi(value) {
       self.value = .smi(smi)
     } else {
-      let heap = BigIntHeapOld(value)
+      let heap = BigIntHeap(value)
       self.value = .heap(heap)
     }
   }
@@ -154,13 +160,13 @@ public struct BigInt:
   }
 
   public init<T: BinaryFloatingPoint>(_ source: T) {
-    let heap = BigIntHeapOld(source)
+    let heap = BigIntHeap(source)
     self.value = .heap(heap)
     self.downgradeToSmiIfPossible()
   }
 
   public init?<T: BinaryFloatingPoint>(exactly source: T) {
-    guard let heap = BigIntHeapOld(exactly: source) else {
+    guard let heap = BigIntHeap(exactly: source) else {
       return nil
     }
 
@@ -173,7 +179,7 @@ public struct BigInt:
   }
 
   /// This will downgrade to `Smi` if possible
-  internal init(_ value: BigIntHeapOld) {
+  internal init(_ value: BigIntHeap) {
     self.value = .heap(value)
     self.downgradeToSmiIfPossible()
   }
@@ -202,7 +208,7 @@ public struct BigInt:
     case let .smi(smi):
       return smi.negated
     case let .heap(heap):
-      let copy = heap.copy()
+      var copy = heap
       copy.negate()
       return BigInt(copy)
     }
@@ -213,7 +219,7 @@ public struct BigInt:
     case let .smi(smi):
       return smi.inverted
     case let .heap(heap):
-      let copy = heap.copy()
+      var copy = heap
       copy.invert()
       return BigInt(copy)
     }
@@ -228,12 +234,12 @@ public struct BigInt:
 
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      let copy = heap.copy()
-      copy.add(other: smi)
+      var copy = heap
+      copy.add(other: smi.value)
       return BigInt(copy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.add(other: rhs)
       return BigInt(copy)
     }
@@ -247,17 +253,21 @@ public struct BigInt:
 
     case let (.smi(lhsSmi), .heap(rhs)):
       // Unfortunately in this case we have to copy 'rhs'
-      let rhsCopy = rhs.copy()
-      rhsCopy.add(other: lhsSmi)
+      var rhsCopy = rhs
+      rhsCopy.add(other: lhsSmi.value)
       lhs.value = .heap(rhsCopy)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.add(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.add(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.add(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
@@ -271,18 +281,18 @@ public struct BigInt:
 
     case let (.smi(lhs), .heap(rhs)):
       // x - y = x + (-y) = (-y) + x
-      let rhsCopy = rhs.copy()
+      var rhsCopy = rhs
       rhsCopy.negate()
-      rhsCopy.add(other: lhs)
+      rhsCopy.add(other: lhs.value)
       return BigInt(rhsCopy)
 
     case let (.heap(lhs), .smi(rhs)):
-      let copy = lhs.copy()
-      copy.sub(other: rhs)
+      var copy = lhs
+      copy.sub(other: rhs.value)
       return BigInt(copy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.sub(other: rhs)
       return BigInt(copy)
     }
@@ -295,20 +305,24 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      // Unfortunately in this case we have to copy rhs
+      // Unfortunately in this case we have to copy 'rhs'
       // x - y = x + (-y) = (-y) + x
-      let rhsCopy = rhs.copy()
+      var rhsCopy = rhs
       rhsCopy.negate()
-      rhsCopy.add(other: lhsSmi)
+      rhsCopy.add(other: lhsSmi.value)
       lhs.value = .heap(rhsCopy)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.sub(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.sub(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.sub(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
@@ -322,12 +336,12 @@ public struct BigInt:
 
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      let heapCopy = heap.copy()
-      heapCopy.mul(other: smi)
+      var heapCopy = heap
+      heapCopy.mul(other: smi.value)
       return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.mul(other: rhs)
       return BigInt(copy)
     }
@@ -340,18 +354,22 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      // Unfortunately in this case we have to copy rhs
-      let rhsCopy = rhs.copy()
-      rhsCopy.mul(other: lhsSmi)
+      // Unfortunately in this case we have to copy 'rhs'
+      var rhsCopy = rhs
+      rhsCopy.mul(other: lhsSmi.value)
       lhs.value = .heap(rhsCopy)
       lhs.downgradeToSmiIfPossible() // probably not
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.mul(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.mul(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible() // probably not
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.mul(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible() // probably not
     }
   }
@@ -364,18 +382,18 @@ public struct BigInt:
       return lhs.div(other: rhs)
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
-      lhsHeap.div(other: rhs)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
+      _ = lhsHeap.div(other: rhs)
       return BigInt(lhsHeap)
 
     case let (.heap(heap), .smi(smi)):
-      let heapCopy = heap.copy()
-      heapCopy.div(other: smi)
+      var heapCopy = heap
+      _ = heapCopy.div(other: smi.value)
       return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
-      copy.div(other: rhs)
+      var copy = lhs
+      _ = copy.div(other: rhs)
       return BigInt(copy)
     }
   }
@@ -387,17 +405,21 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
-      lhsHeap.div(other: rhs)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
+      _ = lhsHeap.div(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.div(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      _ = lhsHeap.div(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
-      lhsHeap.div(other: rhs)
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      _ = lhsHeap.div(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
@@ -410,17 +432,17 @@ public struct BigInt:
       return lhs.mod(other: rhs)
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
       lhsHeap.mod(other: rhs)
       return BigInt(lhsHeap)
 
     case let (.heap(heap), .smi(smi)):
-      let heapCopy = heap.copy()
-      heapCopy.mod(other: smi)
+      var heapCopy = heap
+      heapCopy.mod(other: smi.value)
       return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.mod(other: rhs)
       return BigInt(copy)
     }
@@ -433,17 +455,21 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
       lhsHeap.mod(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.mod(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.mod(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.mod(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
@@ -452,8 +478,15 @@ public struct BigInt:
 
   public typealias DivMod = (quotient: BigInt, remainder: BigInt)
 
-  // TODO: Use this in Violet (and also power)
+  // TODO: Use this in Violet
   public func divMod(other: BigInt) -> DivMod {
+    func bothHeap(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
+      let result = lhs.divMod(other: rhs)
+      let quotient = BigInt(result.quotient)
+      let remainder = BigInt(result.remainder)
+      return (quotient: quotient, remainder: remainder)
+    }
+
     switch (self.value, other.value) {
     case let (.smi(lhs), .smi(rhs)):
       // This is so cheap that we can do it in a trivial way
@@ -463,24 +496,18 @@ public struct BigInt:
 
     case let (.smi(lhs), .heap(rhs)):
       // We need to promote 'lhs' to heap
-      let lhsHeap = BigIntHeapOld(lhs.value)
-      return self.divMod(lhs: lhsHeap, rhs: rhs)
+      let lhsHeap = BigIntHeap(lhs.value)
+      return bothHeap(lhs: lhsHeap, rhs: rhs)
 
     case let (.heap(lhs), .smi(rhs)):
-      // We need to promote 'rhs' to heap
-      let rhsHeap = BigIntHeapOld(rhs.value)
-      return self.divMod(lhs: lhs, rhs: rhsHeap)
+      let result = lhs.divMod(other: rhs.value)
+      let quotient = BigInt(result.quotient)
+      let remainder = BigInt(smi: result.remainder)
+      return (quotient: quotient, remainder: remainder)
 
     case let (.heap(lhs), .heap(rhs)):
-      return self.divMod(lhs: lhs, rhs: rhs)
+      return bothHeap(lhs: lhs, rhs: rhs)
     }
-  }
-
-  private func divMod(lhs: BigIntHeapOld, rhs: BigIntHeapOld) -> DivMod {
-    let result = BigIntHeapOld.divMod(lhs: lhs, rhs: rhs)
-    let quotient = BigInt(result.quotient)
-    let remainder = BigInt(result.remainder)
-    return (quotient: quotient, remainder: remainder)
   }
 
   // MARK: - And
@@ -492,12 +519,12 @@ public struct BigInt:
 
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      let heapCopy = heap.copy()
-      heapCopy.and(other: smi)
+      var heapCopy = heap
+      heapCopy.and(other: smi.value)
       return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.and(other: rhs)
       return BigInt(copy)
     }
@@ -510,17 +537,21 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
       lhsHeap.and(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.and(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.and(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.and(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
@@ -534,12 +565,12 @@ public struct BigInt:
 
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      let heapCopy = heap.copy()
-      heapCopy.or(other: smi)
+      var heapCopy = heap
+      heapCopy.or(other: smi.value)
       return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.or(other: rhs)
       return BigInt(copy)
     }
@@ -552,17 +583,21 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
       lhsHeap.or(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.or(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.or(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.or(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
@@ -576,12 +611,12 @@ public struct BigInt:
 
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      let heapCopy = heap.copy()
-      heapCopy.xor(other: smi)
+      var heapCopy = heap
+      heapCopy.xor(other: smi.value)
       return BigInt(heapCopy)
 
     case let (.heap(lhs), .heap(rhs)):
-      let copy = lhs.copy()
+      var copy = lhs
       copy.xor(other: rhs)
       return BigInt(copy)
     }
@@ -594,66 +629,130 @@ public struct BigInt:
       lhs.value = result.value
 
     case let (.smi(lhsSmi), .heap(rhs)):
-      let lhsHeap = BigIntHeapOld(lhsSmi.value)
+      var lhsHeap = BigIntHeap(lhsSmi.value)
       lhsHeap.xor(other: rhs)
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .smi(rhs)):
-      lhsHeap.xor(other: rhs)
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.xor(other: rhs.value)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
 
-    case let (.heap(lhsHeap), .heap(rhs)):
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
       lhsHeap.xor(other: rhs)
+      lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
   }
 
   // MARK: - Shift left
 
-  public static func << <T: BinaryInteger>(lhs: BigInt, rhs: T) -> BigInt {
-    switch lhs.value {
-    case let .smi(smi):
-      return smi.shiftLeft(count: rhs)
-    case let .heap(heap):
-      let copy = heap.copy()
-      copy.shiftLeft(count: rhs)
-      return BigInt(copy)
+  public static func << (lhs: BigInt, rhs: BigInt) -> BigInt {
+    switch (lhs.value, rhs.value) {
+    case let (.smi(lhs), .smi(rhs)):
+      return lhs.shiftLeft(count: rhs.value)
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      var lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.shiftLeft(count: rhs)
+      return BigInt(lhsHeap)
+
+    case let (.heap(lhs), .smi(rhs)):
+      var lhsCopy = lhs
+      lhsCopy.shiftLeft(count: rhs.value)
+      return BigInt(lhsCopy)
+
+    case let (.heap(lhs), .heap(rhs)):
+      var lhsCopy = lhs
+      lhsCopy.shiftLeft(count: rhs)
+      return BigInt(lhsCopy)
     }
   }
 
   public static func <<= <T: BinaryInteger>(lhs: inout BigInt, rhs: T) {
-    switch lhs.value {
-    case let .smi(smi):
-      let result = smi.shiftLeft(count: rhs)
+    let rhsBig = BigInt(rhs)
+
+    switch (lhs.value, rhsBig.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.shiftLeft(count: rhs.value)
       lhs.value = result.value
-    case let .heap(heap):
-      heap.shiftLeft(count: rhs)
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      var lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.shiftLeft(count: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.shiftLeft(count: rhs.value)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.shiftLeft(count: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
     }
   }
 
   // MARK: - Shift right
 
-  public static func >> <T: BinaryInteger>(lhs: BigInt, rhs: T) -> BigInt {
-    switch lhs.value {
-    case let .smi(smi):
-      return smi.shiftRight(count: rhs)
-    case let .heap(heap):
-      let copy = heap.copy()
-      copy.shiftRight(count: rhs)
-      return BigInt(copy)
-    }
+  public static func >> (lhs: BigInt, rhs: BigInt) -> BigInt {
+   switch (lhs.value, rhs.value) {
+   case let (.smi(lhs), .smi(rhs)):
+     return lhs.shiftRight(count: rhs.value)
+
+   case let (.smi(lhsSmi), .heap(rhs)):
+     var lhsHeap = BigIntHeap(lhsSmi.value)
+     lhsHeap.shiftRight(count: rhs)
+     return BigInt(lhsHeap)
+
+   case let (.heap(lhs), .smi(rhs)):
+     var lhsCopy = lhs
+     lhsCopy.shiftRight(count: rhs.value)
+     return BigInt(lhsCopy)
+
+   case let (.heap(lhs), .heap(rhs)):
+     var lhsCopy = lhs
+     lhsCopy.shiftRight(count: rhs)
+     return BigInt(lhsCopy)
+   }
   }
 
   public static func >>= <T: BinaryInteger>(lhs: inout BigInt, rhs: T) {
-    switch lhs.value {
-    case let .smi(smi):
-      let result = smi.shiftRight(count: rhs)
+    let rhsBig = BigInt(rhs)
+
+    switch (lhs.value, rhsBig.value) {
+    case let (.smi(lhsSmi), .smi(rhs)):
+      let result = lhsSmi.shiftRight(count: rhs.value)
       lhs.value = result.value
-    case let .heap(heap):
-      heap.shiftRight(count: rhs)
+
+    case let (.smi(lhsSmi), .heap(rhs)):
+      var lhsHeap = BigIntHeap(lhsSmi.value)
+      lhsHeap.shiftRight(count: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case (.heap(var lhsHeap), .smi(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.shiftRight(count: rhs.value)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
+
+    case (.heap(var lhsHeap), .heap(let rhs)):
+      Self.releaseBufferToPreventCOW(&lhs)
+      lhsHeap.shiftRight(count: rhs)
+      lhs.value = .heap(lhsHeap)
+      lhs.downgradeToSmiIfPossible()
     }
   }
+
+  // TODO: power(exponent:)
 
   // MARK: - String
 
@@ -692,9 +791,11 @@ public struct BigInt:
     switch (lhs.value, rhs.value) {
     case let (.smi(lhs), .smi(rhs)):
       return lhs == rhs
+
     case let (.smi(smi), .heap(heap)),
          let (.heap(heap), .smi(smi)):
-      return heap == smi
+      return heap == smi.value
+
     case let (.heap(lhs), .heap(rhs)):
       return lhs == rhs
     }
@@ -706,10 +807,18 @@ public struct BigInt:
     switch (lhs.value, rhs.value) {
     case let (.smi(lhs), .smi(rhs)):
       return lhs < rhs
+
     case let (.smi(smi), .heap(heap)):
-      return heap >= smi
+      // 'smi < heap' which is the same as 'heap > smi'
+      // negation:
+      // 'heap <= smi' which is the same as 'heap < smi or heap == smi'
+      let heapIsLessOrEqual = heap < smi.value || heap == smi.value
+      let heapIsGreater = !heapIsLessOrEqual
+      return heapIsGreater
+
     case let (.heap(heap), .smi(smi)):
-      return heap < smi
+      return heap < smi.value
+
     case let (.heap(lhs), .heap(rhs)):
       return lhs < rhs
     }
@@ -724,5 +833,25 @@ public struct BigInt:
     case let .heap(heap):
       heap.hash(into: &hasher)
     }
+  }
+
+  // MARK: - Release buffer to prevent COW
+
+  /// In `inout` operators we have `lhs: inout BigInt`, which may contain
+  /// reference to `BigIntStorage`.
+  /// Then we pattern match it on `lhs.value` to extract `BigIntHeap`,
+  /// which increases reference count to `2`.
+  /// Then any operation done on this `BigIntStorage` would force COW,
+  /// which kinda defeats the purpose.
+  ///
+  /// To solve this we will temporary assign `lhs.value = smi.zero`.
+  /// This will require some `ARC` traffic, but we probably need to fetch this
+  /// object anyway (when we do not have `weak` refs, then `ref` count is stored
+  /// as a 2nd word in object).
+  ///
+  /// Yes, it is a HACK.
+  private static func releaseBufferToPreventCOW(_ int: inout BigInt) {
+    let zero = Smi(Smi.Storage.zero)
+    int.value = .smi(zero)
   }
 }

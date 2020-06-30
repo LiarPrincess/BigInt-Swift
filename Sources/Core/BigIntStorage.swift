@@ -3,6 +3,7 @@ import Foundation
 // swiftlint:disable empty_count
 // swiftlint:disable file_length
 
+// TODO: Rename: BigIntHeapStorage
 /// Basically a `Word` collection with a sign.
 ///
 /// Least significant word is at index `0`.
