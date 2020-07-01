@@ -18,6 +18,7 @@ extension NodeTests {
       rhs: rhs,
       expecting: expecting,
       op: { $0 + $1 },
+      inoutOp: { $0 += $1 },
       file: file,
       line: line
     )
@@ -33,6 +34,7 @@ extension NodeTests {
       rhs: rhs,
       expecting: expecting,
       op: { $0 - $1 },
+      inoutOp: { $0 -= $1 },
       file: file,
       line: line
     )
@@ -48,6 +50,7 @@ extension NodeTests {
       rhs: rhs,
       expecting: expecting,
       op: { $0 * $1 },
+      inoutOp: { $0 *= $1 },
       file: file,
       line: line
     )
@@ -63,6 +66,7 @@ extension NodeTests {
       rhs: rhs,
       expecting: expecting,
       op: { $0 / $1 },
+      inoutOp: { $0 /= $1 },
       file: file,
       line: line
     )
@@ -78,22 +82,27 @@ extension NodeTests {
       rhs: rhs,
       expecting: expecting,
       op: { $0 % $1 },
+      inoutOp: { $0 %= $1 },
       file: file,
       line: line
     )
   }
 
   internal typealias BinaryOperation = (BigInt, BigInt) -> BigInt
+  internal typealias InoutBinaryOperation = (inout BigInt, BigInt) -> Void
 
   private func binaryOp(lhs lhsString: String,
                         rhs rhsString: String,
                         expecting expectedString: String,
                         op: BinaryOperation,
+                        inoutOp: InoutBinaryOperation,
                         file: StaticString,
                         line: UInt) {
     let lhs: BigInt
+    let lhsBeforeInout: BigInt // Later to check if 'inout' did not modify orginal
     do {
       lhs = try self.create(string: lhsString, radix: 10)
+      lhsBeforeInout = try self.create(string: lhsString, radix: 10)
     } catch {
       XCTFail("Unable to parse lhs: \(error)", file: file, line: line)
       return
@@ -115,8 +124,17 @@ extension NodeTests {
       return
     }
 
+    // Check 'standard' op
     let result = op(lhs, rhs)
     XCTAssertEqual(result, expected, file: file, line: line)
+
+    // Check 'inout' op
+    var inoutLhs = lhs
+    inoutOp(&inoutLhs, rhs)
+    XCTAssertEqual(inoutLhs, expected, "INOUT!!1", file: file, line: line)
+
+    // Make sure that 'inout' did not modify orginal
+    XCTAssertEqual(lhs, lhsBeforeInout, "Inout did modify orginal value", file: file, line: line)
   }
 
   /// Abstraction over `BigInt.init(_:radix:)`.
