@@ -442,6 +442,18 @@ extension BigIntHeap {
     }
   }
 
-  // TODO: Mod
   // TODO: Div mod
+  // MARK: - Mod
+
+  internal mutating func mod(other: Smi.Storage) {
+    var copy = self
+    let mod = copy.div(other: other)
+    self = BigIntHeap(mod)
+  }
+
+  internal mutating func mod(other: BigIntHeap) {
+    var copy = self
+    let mod = copy.div(other: other)
+    self = mod
+  }
 }
