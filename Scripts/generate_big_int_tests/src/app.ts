@@ -23,4 +23,8 @@ printBinaryOperationTests('Mul', (a, b) => a * b);
 printBinaryOperationTests('Div', (a, b) => a / b);
 printBinaryOperationTests('Mod', (a, b) => a % b);
 
+printBinaryOperationTests('And', (a, b) => a & b);
+printBinaryOperationTests('Or', (a, b) => a | b);
+printBinaryOperationTests('Xor', (a, b) => a ^ b);
+
 console.log('}');

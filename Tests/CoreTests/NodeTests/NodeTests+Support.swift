@@ -88,6 +88,54 @@ extension NodeTests {
     )
   }
 
+  internal func andTest(lhs: String,
+                        rhs: String,
+                        expecting: String,
+                        file: StaticString = #file,
+                        line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 & $1 },
+      inoutOp: { $0 &= $1 },
+      file: file,
+      line: line
+    )
+  }
+
+  internal func orTest(lhs: String,
+                       rhs: String,
+                       expecting: String,
+                       file: StaticString = #file,
+                       line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 | $1 },
+      inoutOp: { $0 |= $1 },
+      file: file,
+      line: line
+    )
+  }
+
+  internal func xorTest(lhs: String,
+                        rhs: String,
+                        expecting: String,
+                        file: StaticString = #file,
+                        line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 ^ $1 },
+      inoutOp: { $0 ^= $1 },
+      file: file,
+      line: line
+    )
+  }
+
   internal typealias BinaryOperation = (BigInt, BigInt) -> BigInt
   internal typealias InoutBinaryOperation = (inout BigInt, BigInt) -> Void
 

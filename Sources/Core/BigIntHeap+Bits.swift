@@ -176,13 +176,13 @@ extension BigIntHeap {
     var result = BigIntStorage(repeating: 0, count: resultCount + Int(bothNegative))
 
     for i in 0..<v.count {
-      let ul = (u[i] ^ uMask) + uIsNegative
+      let ul = (u[i] ^ uMask) &+ uIsNegative
       uIsNegative = (ul < uIsNegative).asWord
 
-      let vl = (v[i] ^ vMask) + vIsNegative
+      let vl = (v[i] ^ vMask) &+ vIsNegative
       vIsNegative = (vl < vIsNegative).asWord
 
-      let rl = ((ul & vl) ^ bothNegativeMask) + bothNegative
+      let rl = ((ul & vl) ^ bothNegativeMask) &+ bothNegative
       bothNegative = (rl < bothNegative).asWord
 
       result[i] = rl
@@ -191,10 +191,10 @@ extension BigIntHeap {
     assert(vIsNegative == 0)
 
     for i in v.count..<resultCount {
-      let ul = (u[i] ^ uMask) + uIsNegative
+      let ul = (u[i] ^ uMask) &+ uIsNegative
       uIsNegative = (ul < uIsNegative).asWord
 
-      let rl = ( (ul & vMask) ^ bothNegativeMask) + bothNegative
+      let rl = ( (ul & vMask) ^ bothNegativeMask) &+ bothNegative
       bothNegative = (rl < bothNegative).asWord
 
       result[i] = rl
@@ -272,13 +272,13 @@ extension BigIntHeap {
     var result = BigIntStorage(repeating: 0, count: resultCount + Int(anyNegative))
 
     for i in 0..<v.count {
-      let ul = (u[i] ^ uMask) + uIsNegative
+      let ul = (u[i] ^ uMask) &+ uIsNegative
       uIsNegative = (ul < uIsNegative).asWord
 
-      let vl = (v[i] ^ vMask) + vIsNegative
+      let vl = (v[i] ^ vMask) &+ vIsNegative
       vIsNegative = (vl < vIsNegative).asWord
 
-      let rl = ((ul | vl) ^ anyNegativeMask) + anyNegative
+      let rl = ((ul | vl) ^ anyNegativeMask) &+ anyNegative
       anyNegative = (rl < anyNegative).asWord
 
       result[i] = rl
@@ -287,10 +287,10 @@ extension BigIntHeap {
     assert(vIsNegative == 0)
 
     for i in v.count..<resultCount {
-      let ul = (u[i] ^ uMask) + uIsNegative
+      let ul = (u[i] ^ uMask) &+ uIsNegative
       uIsNegative = (ul < uIsNegative).asWord
 
-      let rl = ( (ul | vMask) ^ anyNegativeMask) + anyNegative
+      let rl = ( (ul | vMask) ^ anyNegativeMask) &+ anyNegative
       anyNegative = (rl < anyNegative).asWord
 
       result[i] = rl
@@ -366,13 +366,13 @@ extension BigIntHeap {
     var result = BigIntStorage(repeating: 0, count: resultCount + Int(onlyOneNegative))
 
     for i in 0..<v.count {
-      let ul = (u[i] ^ uMask) + uIsNegative
+      let ul = (u[i] ^ uMask) &+ uIsNegative
       uIsNegative = (ul < uIsNegative).asWord
 
-      let vl = (v[i] ^ vMask) + vIsNegative
+      let vl = (v[i] ^ vMask) &+ vIsNegative
       vIsNegative = (vl < vIsNegative).asWord
 
-      let rl = (ul ^ vl ^ onlyOneNegativeMask) + onlyOneNegative
+      let rl = (ul ^ vl ^ onlyOneNegativeMask) &+ onlyOneNegative
       onlyOneNegative = (rl < onlyOneNegative).asWord
 
       result[i] = rl
@@ -381,10 +381,10 @@ extension BigIntHeap {
     assert(vIsNegative == 0)
 
     for i in v.count..<resultCount {
-      let ul = (u[i] ^ uMask) + uIsNegative
+      let ul = (u[i] ^ uMask) &+ uIsNegative
       uIsNegative = (ul < uIsNegative).asWord
 
-      let rl = (ul ^ uMask) + onlyOneNegative
+      let rl = (ul ^ uMask) &+ onlyOneNegative
       onlyOneNegative = (rl < onlyOneNegative).asWord
 
       result[i] = rl
