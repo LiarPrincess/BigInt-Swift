@@ -8,8 +8,8 @@ export const smiMin = -2147483648n;
 /**
  * We will return `2 * countButNotReally + 3` values (don't ask).
  */
-export function generateSmiNumbers(countButNotReally: number): BigInt[] {
-  const result: BigInt[] = [];
+export function generateSmiNumbers(countButNotReally: number): bigint[] {
+  const result: bigint[] = [];
 
   result.push(0n);
   result.push(1n);
@@ -41,8 +41,8 @@ export const wordMin = 0;
 /**
  * We will return `2 * countButNotReally + 5` values (don't ask).
  */
-export function generateHeapNumbers(countButNotReally: number): BigInt[] {
-  const result: BigInt[] = [];
+export function generateHeapNumbers(countButNotReally: number): bigint[] {
+  const result: bigint[] = [];
 
   result.push(0n);
   result.push(1n);
