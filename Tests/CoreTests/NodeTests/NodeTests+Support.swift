@@ -23,6 +23,66 @@ extension NodeTests {
     )
   }
 
+  internal func subTest(lhs: String,
+                        rhs: String,
+                        expecting: String,
+                        file: StaticString = #file,
+                        line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 - $1 },
+      file: file,
+      line: line
+    )
+  }
+
+  internal func mulTest(lhs: String,
+                        rhs: String,
+                        expecting: String,
+                        file: StaticString = #file,
+                        line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 * $1 },
+      file: file,
+      line: line
+    )
+  }
+
+  internal func divTest(lhs: String,
+                        rhs: String,
+                        expecting: String,
+                        file: StaticString = #file,
+                        line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 / $1 },
+      file: file,
+      line: line
+    )
+  }
+
+  internal func modTest(lhs: String,
+                        rhs: String,
+                        expecting: String,
+                        file: StaticString = #file,
+                        line: UInt = #line) {
+    self.binaryOp(
+      lhs: lhs,
+      rhs: rhs,
+      expecting: expecting,
+      op: { $0 % $1 },
+      file: file,
+      line: line
+    )
+  }
+
   internal typealias BinaryOperation = (BigInt, BigInt) -> BigInt
 
   private func binaryOp(lhs lhsString: String,

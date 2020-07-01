@@ -1,6 +1,9 @@
 import { printBinaryOperationTests } from './printing_functions';
 
 console.log(`\
+// So you made a mistake of opening this file...
+// Ehh...
+
 import XCTest
 @testable import Core
 
@@ -15,5 +18,9 @@ class NodeTests: XCTestCase {
 `);
 
 printBinaryOperationTests('Add', (a, b) => a + b);
+printBinaryOperationTests('Sub', (a, b) => a - b);
+printBinaryOperationTests('Mul', (a, b) => a * b);
+printBinaryOperationTests('Div', (a, b) => a / b);
+printBinaryOperationTests('Mod', (a, b) => a % b);
 
 console.log('}');

@@ -1,4 +1,4 @@
-import { allPossiblePairings } from './all_pairings';
+import { allPossiblePairings, BigIntPair } from './all_pairings';
 import { generateSmiNumbers, generateHeapNumbers } from './number_generators';
 
 const smiNumbers = generateSmiNumbers(10);
@@ -17,42 +17,33 @@ export type BinaryOperation = (lhs: bigint, rhs: bigint) => bigint;
 
 export function printBinaryOperationTests(name: string, op: BinaryOperation) {
   const nameLower = name.toLowerCase();
+  const testFn = `self.${nameLower}Test`;
 
   console.log(`  // MARK: - ${name}`);
   console.log();
 
-  // smi, smi
-  console.log(`  func test_${nameLower}_smi_smi() {`);
-  for (const { lhs, rhs } of smiSmiPairs) {
-    const expected = op(lhs, rhs);
-    console.log(`    self.${nameLower}Test(lhs: "${lhs}", rhs: "${rhs}", expecting: "${expected}")`);
-  }
-  console.log('  }');
-  console.log();
+  printBinaryOperationTest(`${nameLower}_smi_smi`, testFn, smiSmiPairs, op);
+  printBinaryOperationTest(`${nameLower}_smi_heap`, testFn, smiHeapPairs, op);
+  printBinaryOperationTest(`${nameLower}_heap_smi`, testFn, heapSmiPairs, op);
+  printBinaryOperationTest(`${nameLower}_heap_heap`, testFn, heapHeapPairs, op);
+}
 
-  // smi, heap
-  console.log(`  func test_${nameLower}_smi_heap() {`);
-  for (const { lhs, rhs } of smiHeapPairs) {
-    const expected = op(lhs, rhs);
-    console.log(`    self.${nameLower}Test(lhs: "${lhs}", rhs: "${rhs}", expecting: "${expected}")`);
-  }
-  console.log('  }');
-  console.log();
+function printBinaryOperationTest(
+  name: string,
+  testFn: string,
+  values: BigIntPair[],
+  op: BinaryOperation
+) {
+  const isDiv = name.startsWith('div') || name.startsWith('mod');
 
-  // heap, smi
-  console.log(`  func test_${nameLower}_heap_smi() {`);
-  for (const { lhs, rhs } of heapSmiPairs) {
-    const expected = op(lhs, rhs);
-    console.log(`    self.${nameLower}Test(lhs: "${lhs}", rhs: "${rhs}", expecting: "${expected}")`);
-  }
-  console.log('  }');
-  console.log();
+  console.log(`  func test_${name}() {`);
+  for (const { lhs, rhs } of values) {
+    if (isDiv && rhs == 0n) {
+      continue; // Well.. hello there!
+    }
 
-  // heap, heap
-  console.log(`  func test_${nameLower}_heap_heap() {`);
-  for (const { lhs, rhs } of heapHeapPairs) {
     const expected = op(lhs, rhs);
-    console.log(`    self.${nameLower}Test(lhs: "${lhs}", rhs: "${rhs}", expecting: "${expected}")`);
+    console.log(`    ${testFn}(lhs: "${lhs}", rhs: "${rhs}", expecting: "${expected}")`);
   }
   console.log('  }');
   console.log();
