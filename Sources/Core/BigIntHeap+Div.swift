@@ -442,7 +442,6 @@ extension BigIntHeap {
     }
   }
 
-  // TODO: Div mod
   // MARK: - Mod
 
   internal mutating func mod(other: Smi.Storage) {
@@ -455,5 +454,21 @@ extension BigIntHeap {
     var copy = self
     let mod = copy.div(other: other)
     self = mod
+  }
+
+  // MARK: - Div mod
+
+  internal typealias DivMod<Remainder> = (quotient: BigIntHeap, remainder: Remainder)
+
+  internal func divMod(other: Smi.Storage) -> DivMod<Smi.Storage> {
+    var copy = self
+    let mod = copy.div(other: other)
+    return (copy, mod)
+  }
+
+  internal func divMod(other: BigIntHeap) -> DivMod<BigIntHeap> {
+    var copy = self
+    let mod = copy.div(other: other)
+    return (copy, mod)
   }
 }
