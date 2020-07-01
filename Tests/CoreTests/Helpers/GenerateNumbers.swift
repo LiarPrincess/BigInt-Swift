@@ -8,7 +8,7 @@ private let smiMin = Smi.Storage.min
 
 // MARK: - Fixed width integers
 
-/// We will return `2 * countButNotReally + 5` values (don't ask).
+/// Will return `2 * countButNotReally + 3` values (don't ask).
 internal func generateSmiValues(countButNotReally: Int) -> [Smi.Storage] {
   return generateValues(
     countButNotReally: countButNotReally,
@@ -16,7 +16,7 @@ internal func generateSmiValues(countButNotReally: Int) -> [Smi.Storage] {
   )
 }
 
-/// We will return `2 * countButNotReally + 5` values (don't ask).
+/// Will return `2 * countButNotReally + 3` values (don't ask).
 internal func generateIntValues(countButNotReally: Int) -> [Int] {
   return generateValues(
     countButNotReally: countButNotReally,
@@ -75,7 +75,7 @@ internal struct HeapPrototype {
   }
 }
 
-/// We will return `2 * countButNotReally + 5` values (don't ask).
+/// Will return `2 * countButNotReally + 5` values (don't ask).
 ///
 /// We do not return `BigIntHeap` directly because in some cases
 /// (for example equality tests) you may want to create more than 1 value
