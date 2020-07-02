@@ -145,24 +145,13 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
   internal func mul(other: Smi) -> BigInt {
     let (high, low) = self.value.multipliedFullWidth(by: other.value)
 
-    // Normally we could obtain the result by
-    // 'Int(high) << Storage.bitWidth | Int(low)',
-    // but even without doing this we know if we are in 'Smi' range or not.
-
-    // Positive smi
-    if high == 0 && (low & Smi.mostSignificantBitMask) == 0 {
-      let smi = Storage(bitPattern: low)
-      return BigInt(smi: smi)
-    }
-
-    // Negative smi
-    if high == Smi.allOneMask {
-      let smi = Storage(bitPattern: low)
-      return BigInt(smi: smi)
-    }
-
-    // Heap
+    assert(Int.bitWidth > Storage.bitWidth)
     let result = Int(high) << Storage.bitWidth | Int(low)
+
+    if let smi = Storage(exactly: result) {
+      return BigInt(smi: smi)
+    }
+
     let heap = BigIntHeap(result)
     return BigInt(heap)
   }
