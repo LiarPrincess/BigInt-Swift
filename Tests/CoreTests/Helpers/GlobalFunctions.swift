@@ -1,28 +1,32 @@
 // MARK: - Pair values
 
-internal struct PossiblePairings<T>: Sequence {
+internal struct PossiblePairings<T, V>: Sequence {
 
-  internal typealias Element = (T, T)
+  internal typealias Element = (T, V)
 
   internal struct Iterator: IteratorProtocol {
+
+    private let lhsValues: [T]
+    private let rhsValues: [V]
+
     private var lhsIndex = 0
     private var rhsIndex = 0
-    private let values: [T]
 
-    fileprivate init(values: [T]) {
-      self.values = values
+    fileprivate init(lhs: [T], rhs: [V]) {
+      self.lhsValues = lhs
+      self.rhsValues = rhs
     }
 
     internal mutating func next() -> Element? {
-      if self.lhsIndex == self.values.count {
+      if self.lhsIndex == self.lhsValues.count {
         return nil
       }
 
-      let lhs = self.values[self.lhsIndex]
-      let rhs = self.values[self.rhsIndex]
+      let lhs = self.lhsValues[self.lhsIndex]
+      let rhs = self.rhsValues[self.rhsIndex]
 
       self.rhsIndex += 1
-      if self.rhsIndex == self.values.count {
+      if self.rhsIndex == self.rhsValues.count {
         self.lhsIndex += 1
         self.rhsIndex = 0
       }
@@ -31,20 +35,27 @@ internal struct PossiblePairings<T>: Sequence {
     }
   }
 
-  private let values: [T]
+  private let lhsValues: [T]
+  private let rhsValues: [V]
 
-  fileprivate init(values: [T]) {
-    self.values = values
+  fileprivate init(lhs: [T], rhs: [V]) {
+    self.lhsValues = lhs
+    self.rhsValues = rhs
   }
 
   internal func makeIterator() -> Iterator {
-    return Iterator(values: self.values)
+    return Iterator(lhs: self.lhsValues, rhs: self.rhsValues)
   }
 }
 
 /// `[1, 2] -> [(1,1), (1,2), (2,1), (2,2)]`
-internal func allPossiblePairings<T>(values: [T]) -> PossiblePairings<T> {
-  return PossiblePairings(values: values)
+internal func allPossiblePairings<T>(values: [T]) -> PossiblePairings<T, T> {
+  return PossiblePairings(lhs: values, rhs: values)
+}
+
+/// `[1, 2], [1, 2] -> [(1,1), (1,2), (2,1), (2,2)]`
+internal func allPossiblePairings<T, S>(lhs: [T], rhs: [S]) -> PossiblePairings<T, S> {
+  return PossiblePairings(lhs: lhs, rhs: rhs)
 }
 
 // MARK: - Powers of 2

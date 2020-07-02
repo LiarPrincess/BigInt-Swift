@@ -18,3 +18,8 @@ internal func attaInt(heap: BigIntHeap) -> BigIntProxy {
   let words = Array(heap.storage)
   return attaInt(isNegative: heap.isNegative, words: words)
 }
+
+internal func attaInt(string: String, radix: Int = 10) -> BigIntProxy {
+  // swiftlint:disable:next force_unwrapping
+  return BigIntProxy(string, radix: radix)!
+}
