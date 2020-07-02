@@ -305,7 +305,7 @@ extension BigIntHeap {
     dividing u: (Word, Word, Word), // swiftlint:disable:this large_tuple
     by v: (Word, Word)
   ) -> Word {
-    // 601 / 61 = ~10 = 9 = Word.max (we have decimal words)
+    // 601 / 61 = ~10 = 9 = Word.max (example for decimal words)
     if u.0 == v.0 {
       return Word.max
     }
@@ -353,7 +353,7 @@ extension BigIntHeap {
       result = BigIntStorage(repeating: .zero, count: value.count)
     case .alwaysAddOneDigit:
       result = BigIntStorage(repeating: .zero, count: value.count + 1)
-      result[result.count - 1] = result[value.count - 1] >> (Word.bitWidth - shift)
+      result[result.count - 1] = value[value.count - 1] >> (Word.bitWidth - shift)
     }
 
     for i in stride(from: value.count - 1, to: 0, by: -1) {
