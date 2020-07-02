@@ -9,9 +9,9 @@ const smiHeapPairs = allPossiblePairings(smiNumbers, heapNumbers);
 const heapSmiPairs = allPossiblePairings(heapNumbers, smiNumbers);
 const heapHeapPairs = allPossiblePairings(heapNumbers, heapNumbers);
 
-// =======================
-// === UnaryOperations ===
-// =======================
+// ========================
+// === Unary operations ===
+// ========================
 
 export type UnaryOperation = (value: bigint) => bigint;
 
@@ -44,9 +44,9 @@ function printUnaryOperationTest(
   console.log();
 }
 
-// ========================
-// === BinaryOperations ===
-// ========================
+// =========================
+// === Binary operations ===
+// =========================
 
 export type BinaryOperation = (lhs: bigint, rhs: bigint) => bigint;
 
@@ -80,6 +80,51 @@ function printBinaryOperationTest(
     const expected = op(lhs, rhs);
     console.log(`    ${testFn}(lhs: "${lhs}", rhs: "${rhs}", expecting: "${expected}")`);
   }
+  console.log('  }');
+  console.log();
+}
+
+// ==============
+// === Shifts ===
+// ==============
+
+export type ShiftOperation = (value: bigint, count: bigint) => bigint;
+
+export function printShiftOperationTests(name: string, op: ShiftOperation) {
+  const nameLower = name.toLowerCase();
+  const testFn = `self.shift${name}Test`;
+
+  const lessThanWord = 5n;
+  const word = 64n;
+  const moreThanWord = 64n + 64n - 7n;
+
+  console.log(`  // MARK: - Shift ${nameLower}`);
+  console.log();
+
+  printShiftTest(`shift${name}_smi_lessThanWord`, testFn, smiNumbers, lessThanWord, op);
+  printShiftTest(`shift${name}_smi_word`, testFn, smiNumbers, word, op);
+  printShiftTest(`shift${name}_smi_moreThanWord`, testFn, smiNumbers, moreThanWord, op);
+
+  printShiftTest(`shift${name}_heap_lessThanWord`, testFn, heapNumbers, lessThanWord, op);
+  printShiftTest(`shift${name}_heap_word`, testFn, heapNumbers, word, op);
+  printShiftTest(`shift${name}_heap_moreThanWord`, testFn, heapNumbers, moreThanWord, op);
+}
+function printShiftTest(
+  name: string,
+  testFn: string,
+  values: bigint[],
+  count: bigint,
+  op: ShiftOperation
+) {
+  console.log(`  func test_${name}() {`);
+  console.log('    assert(Word.bitWidth == 64)');
+  console.log();
+
+  for (const value of values) {
+    const expected = op(value, count);
+    console.log(`    ${testFn}(value: "${value}", count: ${count}, expecting: "${expected}")`);
+  }
+
   console.log('  }');
   console.log();
 }
