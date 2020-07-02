@@ -10,8 +10,43 @@ const heapSmiPairs = allPossiblePairings(heapNumbers, smiNumbers);
 const heapHeapPairs = allPossiblePairings(heapNumbers, heapNumbers);
 
 // =======================
-// === BinaryOperation ===
+// === UnaryOperations ===
 // =======================
+
+export type UnaryOperation = (value: bigint) => bigint;
+
+export function printUnaryOperationTests(name: string, op: UnaryOperation) {
+  const nameLower = name.toLowerCase();
+  const testFn = `self.${nameLower}Test`;
+
+  console.log(`  // MARK: - ${name}`);
+  console.log();
+
+  printUnaryOperationTest(`${nameLower}_smi`, testFn, smiNumbers, op);
+  printUnaryOperationTest(`${nameLower}_heap`, testFn, heapNumbers, op);
+}
+
+function printUnaryOperationTest(
+  name: string,
+  testFn: string,
+  values: bigint[],
+  op: UnaryOperation
+) {
+  const isDiv = name.startsWith('div') || name.startsWith('mod');
+
+  console.log(`  func test_${name}() {`);
+  for (const value of values) {
+    const expected = op(value);
+    console.log(`    ${testFn}(value: "${value}", expecting: "${expected}")`);
+  }
+
+  console.log('  }');
+  console.log();
+}
+
+// ========================
+// === BinaryOperations ===
+// ========================
 
 export type BinaryOperation = (lhs: bigint, rhs: bigint) => bigint;
 

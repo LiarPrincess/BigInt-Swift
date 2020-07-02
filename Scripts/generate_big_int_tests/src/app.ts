@@ -1,4 +1,4 @@
-import { printBinaryOperationTests } from './printing_functions';
+import { printUnaryOperationTests, printBinaryOperationTests } from './printing_functions';
 
 console.log(`\
 // So you made a mistake of opening this file...
@@ -16,6 +16,10 @@ import XCTest
 /// See 'Scripts/generate_big_int_tests' for details.
 class NodeTests: XCTestCase {
 `);
+
+printUnaryOperationTests('Plus', (a) => a);
+printUnaryOperationTests('Minus', (a) => -a);
+printUnaryOperationTests('Invert', (a) => ~a);
 
 printBinaryOperationTests('Add', (a, b) => a + b);
 printBinaryOperationTests('Sub', (a, b) => a - b);
