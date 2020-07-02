@@ -113,10 +113,14 @@ extension BigIntHeap {
     }
   }
 
+// swiftlint:disable function_body_length
+
   /// static void
   /// mpz_div_q_2exp (mpz_t q, const mpz_t u, mp_bitcnt_t bitShift,
   ///     enum mpz_div_round_mode mode)
   internal mutating func shiftRight(count: Word) {
+// swiftlint:enable function_body_length
+
     if self.isZero || count.isZero {
       return
     }
@@ -128,13 +132,18 @@ extension BigIntHeap {
     // Which means that if we are negative and any of the removed bits is '1'
     // then we have to round down.
     //
-    // This is kinda HACK, kinda MAGIC,
-    // the person that wrote this in GMP is a AMAZING...
+    // Look at this (div by 2 is the same as single shift right):
+    // - Positive numbers:
+    //   - 4 / 2 = 2
+    //   - 5 / 2 = 2.5 which after floor rounding is 2
+    // - Negative numbers:
+    //   - -4 / 2 = -2
+    //   - -5 / 2 = -2.5 which after floor rounding is -3 (not -2!)
     //
     // Tip: Disable the 'if adjust' part later in this function and check unit
     // tests for negative numbers. Every time we cut only '0' the test will pass,
     // in other cases test will fail.
-    let adjust = self.isNegative
+    let needsFloorAdjustmentForNegativeNumbers = self.isNegative
       && self.hasAnyBitSet(wordShift: wordShift, bitShift: bitShift)
 
     self.storage.dropFirst(wordCount: wordShift)
@@ -145,10 +154,14 @@ extension BigIntHeap {
       return
     }
 
-    // If we are shifting by multiply of 'Word' than we are done.
+    // If we are shifting by multiply of 'Word' then we are done.
     // For example for 4 bit word if we shift by 4, 8, 12 or 16
     // we do not have to do anything else: [1011][0000] >> 4 = [1011].
     if bitShift == 0 {
+      if needsFloorAdjustmentForNegativeNumbers {
+        self.adjustAfterRightShift()
+      }
+
       return
     }
 
@@ -196,8 +209,8 @@ extension BigIntHeap {
     if wasNegative && self.isZero {
       // '-1 >> 1000' = '-1'
       self.storage.set(to: -1)
-    } else if adjust {
-      self.sub(other: Word(1))
+    } else if needsFloorAdjustmentForNegativeNumbers {
+      self.adjustAfterRightShift()
     }
   }
 
@@ -214,6 +227,10 @@ extension BigIntHeap {
     let bits = word & bitsMask
 
     return bits > 0
+  }
+
+  private mutating func adjustAfterRightShift() {
+    Self.addMagnitude(lhs: &self.storage, rhs: Word(1))
   }
 
   internal mutating func shiftRight(count: BigIntHeap) {

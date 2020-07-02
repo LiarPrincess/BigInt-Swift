@@ -48,6 +48,7 @@ extension BigIntHeap {
       return singleZeroElement
     }
 
+    // TODO: 2 complement is in the same order as storage [0 word, 1 word etc.]
     return self.asTwoComplement()
   }
 

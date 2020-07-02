@@ -1,7 +1,8 @@
 import XCTest
 @testable import Core
 
-// TODO: Shift right for negative multiple words + non-word shift test
+// swiftlint:disable file_length
+
 private typealias Word = BigIntStorage.Word
 
 private let smiZero = Smi.Storage.zero
@@ -93,15 +94,19 @@ class BigIntHeapShiftTests: XCTestCase {
     for p in generateHeapValues(countButNotReally: 50) {
       // We just want to test if we call 'shiftRight',
       // we do not care about edge cases.
-
-      if p.words.count <= wordShift {
+      guard p.words.count > wordShift else {
         continue
       }
 
-      var value = BigIntHeap(isNegative: p.isNegative, words: p.words)
+      // Set lowest word to '0' to avoid floor rounding case:
+      // -5 / 2 = -3 not -2
+      var words = p.words
+      words[0] = 0
+
+      var value = BigIntHeap(isNegative: p.isNegative, words: words)
       value.shiftLeft(count: -Smi.Storage(bitShift))
 
-      let expectedWords = Array(p.words.dropFirst(wordShift))
+      let expectedWords = Array(words.dropFirst(wordShift))
       let expectedIsNegative = !expectedWords.isEmpty && p.isNegative
       let expected = BigIntHeap(isNegative: expectedIsNegative,
                                 words: expectedWords)
@@ -166,7 +171,9 @@ class BigIntHeapShiftTests: XCTestCase {
     }
   }
 
-  func test_right_smi_byWholeWord() {
+  func test_right_smi_byWholeWord_positive() {
+    let isNegative = false
+
     for p in generateHeapValues(countButNotReally: 50) {
       // No point in shifting '0'
       if p.isZero {
@@ -174,12 +181,77 @@ class BigIntHeapShiftTests: XCTestCase {
       }
 
       for wordShift in 1..<p.words.count {
-        var value = BigIntHeap(isNegative: p.isNegative, words: p.words)
+        var value = BigIntHeap(isNegative: isNegative, words: p.words)
 
         let expectedWords = Array(p.words.dropFirst(wordShift))
-        let expectedIsNegative = !expectedWords.isEmpty && p.isNegative
-        let expected = BigIntHeap(isNegative: expectedIsNegative,
-                                  words: expectedWords)
+        let expected = BigIntHeap(isNegative: isNegative, words: expectedWords)
+
+        let bitShift = wordShift * Word.bitWidth
+        value.shiftRight(count: Smi.Storage(bitShift))
+        XCTAssertEqual(value, expected, "\(p), shift: \(wordShift)")
+      }
+    }
+  }
+
+  func test_right_smi_byWholeWord_negative_withoutAdjustment() {
+    let isNegative = true
+
+    for p in generateHeapValues(countButNotReally: 50) {
+      // No point in shifting '0'
+      if p.isZero {
+        continue
+      }
+
+      for wordShift in 1..<p.words.count {
+        // Set lowest words to '0' to avoid floor rounding case:
+        // -5 / 2 = -3 not -2
+        var words = p.words
+        for i in 0..<wordShift {
+          words[i] = 0
+        }
+
+        var value = BigIntHeap(isNegative: isNegative, words: words)
+
+        let expectedWords = Array(p.words.dropFirst(wordShift))
+        let expectedIsNegative = !expectedWords.isEmpty
+        let expected = BigIntHeap(isNegative: expectedIsNegative, words: expectedWords)
+
+        let bitShift = wordShift * Word.bitWidth
+        value.shiftRight(count: Smi.Storage(bitShift))
+        XCTAssertEqual(value, expected, "\(p), shift: \(wordShift)")
+      }
+    }
+  }
+
+  func test_right_smi_byWholeWord_negative_withAdjustment() {
+    let isNegative = true
+
+    for p in generateHeapValues(countButNotReally: 50) {
+      // No point in shifting '0'
+      if p.isZero {
+        continue
+      }
+
+      for wordShift in 1..<p.words.count {
+        // Setting the lowest word to non-zero value will force adjustment.
+        // -5 / 2 = -3 not -2
+        var words = p.words
+        words[0] = max(words[0], 1)
+
+        var value = BigIntHeap(isNegative: isNegative, words: words)
+
+        // We need to drop words and then apply adjustment to increase magnitude
+        var expectedWords = Array(p.words.dropFirst(wordShift))
+        if !expectedWords.isEmpty {
+          let (increasedMagnitude, overflow) = expectedWords[0].addingReportingOverflow(1)
+          if overflow {
+            continue
+          }
+          expectedWords[0] = increasedMagnitude
+        }
+
+        let expectedIsNegative = !expectedWords.isEmpty
+        let expected = BigIntHeap(isNegative: expectedIsNegative, words: expectedWords)
 
         let bitShift = wordShift * Word.bitWidth
         value.shiftRight(count: Smi.Storage(bitShift))
