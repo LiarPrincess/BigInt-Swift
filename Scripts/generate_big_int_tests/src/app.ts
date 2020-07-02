@@ -1,6 +1,7 @@
 import {
   printUnaryOperationTests,
   printBinaryOperationTests,
+  printDivModTests,
   printShiftOperationTests
 } from './printing_functions';
 
@@ -32,6 +33,8 @@ printBinaryOperationTests('Sub', (a, b) => a - b);
 printBinaryOperationTests('Mul', (a, b) => a * b);
 printBinaryOperationTests('Div', (a, b) => a / b);
 printBinaryOperationTests('Mod', (a, b) => a % b);
+
+printDivModTests();
 
 printBinaryOperationTests('And', (a, b) => a & b);
 printBinaryOperationTests('Or', (a, b) => a | b);

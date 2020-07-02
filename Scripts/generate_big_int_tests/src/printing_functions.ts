@@ -84,6 +84,45 @@ function printBinaryOperationTest(
   console.log();
 }
 
+// ===============
+// === Div mod ===
+// ===============
+
+export function printDivModTests() {
+  const name = 'DivMod';
+  const nameLower = 'divMod';
+  const testFn = `self.${nameLower}Test`;
+
+  console.log(`  // MARK: - ${name}`);
+  console.log();
+
+  printDivModTest(`${nameLower}_smi_smi`, testFn, smiSmiPairs);
+  printDivModTest(`${nameLower}_smi_heap`, testFn, smiHeapPairs);
+  printDivModTest(`${nameLower}_heap_smi`, testFn, heapSmiPairs);
+  printDivModTest(`${nameLower}_heap_heap`, testFn, heapHeapPairs);
+}
+
+function printDivModTest(
+  name: string,
+  testFn: string,
+  values: BigIntPair[]
+) {
+  const isDiv = true;
+
+  console.log(`  func test_${name}() {`);
+  for (const { lhs, rhs } of values) {
+    if (isDiv && rhs == 0n) {
+      continue; // Well.. hello there!
+    }
+
+    const div = lhs / rhs;
+    const mod = lhs % rhs;
+    console.log(`    ${testFn}(lhs: "${lhs}", rhs: "${rhs}", div: "${div}", mod: "${mod}")`);
+  }
+  console.log('  }');
+  console.log();
+}
+
 // ==============
 // === Shifts ===
 // ==============

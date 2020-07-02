@@ -255,6 +255,51 @@ extension NodeTests {
     XCTAssertEqual(lhs, lhsBeforeInout, inoutMsg, file: file, line: line)
   }
 
+  // MARK: - Div mod
+
+  internal func divModTest(lhs lhsString: String,
+                           rhs rhsString: String,
+                           div divString: String,
+                           mod modString: String,
+                           file: StaticString = #file,
+                           line: UInt = #line) {
+    let lhs: BigInt
+    do {
+      lhs = try self.create(string: lhsString, radix: 10)
+    } catch {
+      XCTFail("Unable to parse lhs: \(error)", file: file, line: line)
+      return
+    }
+
+    let rhs: BigInt
+    do {
+      rhs = try self.create(string: rhsString, radix: 10)
+    } catch {
+      XCTFail("Unable to parse rhs: \(error)", file: file, line: line)
+      return
+    }
+
+    let div: BigInt
+    do {
+      div = try self.create(string: divString, radix: 10)
+    } catch {
+      XCTFail("Unable to parse div: \(error)", file: file, line: line)
+      return
+    }
+
+    let mod: BigInt
+    do {
+      mod = try self.create(string: modString, radix: 10)
+    } catch {
+      XCTFail("Unable to parse mod: \(error)", file: file, line: line)
+      return
+    }
+
+    let result = lhs.divMod(other: rhs)
+    XCTAssertEqual(result.quotient, div, file: file, line: line)
+    XCTAssertEqual(result.remainder, mod, file: file, line: line)
+  }
+
   // MARK: - Shifts
 
   internal func shiftLeftTest(value: String,
