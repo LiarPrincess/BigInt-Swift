@@ -229,13 +229,20 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
 
     let maxShiftInsideSmi: Int
     if self.isPositive {
+      // Basically check if any of the shifted bits is '1'.
+      // But remember that after shift the MSB must be '0'!
       let leadingZeroBitCount = self.value.leadingZeroBitCount
       let excludeMostSignificantBit = 1
       maxShiftInsideSmi = leadingZeroBitCount - excludeMostSignificantBit
     } else {
-      // We are perfectly 'ok' with using msb
+      // Basically check if any of the shifted bits is '0'.
+      // We also have to exclude the situation in which after the shift
+      // we would end up with '0' at MSB. We could actually to check for this
+      // or we could just be conservative and exclude this additional bit.
       let inverted = ~self.value
-      maxShiftInsideSmi = inverted.leadingZeroBitCount
+      let leadingZeroBitCount = inverted.leadingZeroBitCount
+      let excludeMostSignificantBit = 1
+      maxShiftInsideSmi = leadingZeroBitCount - excludeMostSignificantBit
     }
 
     if count <= maxShiftInsideSmi {
