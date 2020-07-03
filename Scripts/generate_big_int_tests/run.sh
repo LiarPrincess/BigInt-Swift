@@ -1,1 +1,1 @@
-node ./dist/app.js > "./../../Tests/CoreTests/NodeTests/NodeTests.swift"
+node ./dist/app.js > "./../../Tests/CoreTests/Node/NodeTests.swift"
