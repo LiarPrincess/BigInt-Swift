@@ -1,6 +1,8 @@
 import XCTest
 @testable import Core
 
+// swiftlint:disable file_length
+
 private typealias Word = BigIntHeap.Word
 
 /// Double operation - operation that applied 2 times can also be expressed
@@ -46,21 +48,13 @@ class BigIntDoubleOperationsTests: XCTestCase {
 
   private enum AddSubTestValues {
 
-    /// `Smi.Storage.max / 2`
     fileprivate static let smiA = BigInt(Smi.Storage.max / 2)
-    /// `Smi.Storage.max / 4`
     fileprivate static let smiB = BigInt(Smi.Storage.max / 4)
-    /// `3/4 * Smi.Storage.max`
-    ///
     /// It is quaranteed that `Self.smiC = Self.smiA + Self.smiB`
     fileprivate static let smiC = Self.smiA + Self.smiB
 
-    /// `Word.max / 2`
     fileprivate static let heapA = BigInt(Word.max / 2)
-    /// `Word.max / 4`
     fileprivate static let heapB = BigInt(Word.max / 4)
-    /// `3/4 * Word.max`
-    ///
     /// It is quaranteed that `Self.heapC = Self.heapA + Self.heapB`
     fileprivate static let heapC = Self.heapA + Self.heapB
   }
@@ -210,6 +204,199 @@ class BigIntDoubleOperationsTests: XCTestCase {
       double,
       single,
       "INOUT !!1 \(value) - \(AddSubTestValues.heapA) - \(AddSubTestValues.heapB)",
+      file: file,
+      line: line
+    )
+  }
+
+  // MARK: - Mul
+
+  func test_mul_smiSmi() {
+    for smi in self.smiValues {
+      let int = self.create(smi)
+      self.mulSmiTest(value: int)
+    }
+  }
+
+  func test_mul_smiHeap() {
+    for smi in self.smiValues {
+      let int = self.create(smi)
+      self.mulHeapTest(value: int)
+    }
+  }
+
+  func test_mul_heapSmi() {
+    for smi in self.heapValues {
+      let int = self.create(smi)
+      self.mulSmiTest(value: int)
+    }
+  }
+
+  func test_mul_heapHeap() {
+    for p in self.heapValues {
+      let int = self.create(p)
+      self.mulHeapTest(value: int)
+    }
+  }
+
+  private enum MulDivTestValues {
+
+    fileprivate static let smiA = BigInt(2)
+    fileprivate static let smiB = BigInt(4)
+    /// It is quaranteed that `Self.smiC = Self.smiA * Self.smiB`
+    fileprivate static let smiC = Self.smiA * Self.smiB
+
+    fileprivate static let heapA = BigInt(Word(Smi.Storage.max) + 1)
+    fileprivate static let heapB = BigInt(Word(Smi.Storage.max) + 2)
+    /// It is quaranteed that `Self.heapC = Self.heapA * Self.heapB`
+    fileprivate static let heapC = Self.heapA * Self.heapB
+  }
+
+  private func mulSmiTest(value: BigInt,
+                          file: StaticString = #file,
+                          line: UInt = #line) {
+    let double = value * MulDivTestValues.smiA * MulDivTestValues.smiB
+    let single = value * MulDivTestValues.smiC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "\(value) * \(MulDivTestValues.smiA) * \(MulDivTestValues.smiB)",
+      file: file,
+      line: line
+    )
+
+    var inoutDouble = value
+    inoutDouble *= MulDivTestValues.smiA
+    inoutDouble *= MulDivTestValues.smiB
+
+    var inoutSingle = value
+    inoutSingle *= MulDivTestValues.smiC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "INOUT !!1 \(value) * \(MulDivTestValues.smiA) * \(MulDivTestValues.smiB)",
+      file: file,
+      line: line
+    )
+  }
+
+  private func mulHeapTest(value: BigInt,
+                           file: StaticString = #file,
+                           line: UInt = #line) {
+    let double = value * MulDivTestValues.heapA * MulDivTestValues.heapB
+    let single = value * MulDivTestValues.heapC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "\(value) * \(MulDivTestValues.heapA) * \(MulDivTestValues.heapB)",
+      file: file,
+      line: line
+    )
+
+    var inoutDouble = value
+    inoutDouble *= MulDivTestValues.heapA
+    inoutDouble *= MulDivTestValues.heapB
+
+    var inoutSingle = value
+    inoutSingle *= MulDivTestValues.heapC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "INOUT !!1 \(value) * \(MulDivTestValues.heapA) * \(MulDivTestValues.heapB)",
+      file: file,
+      line: line
+    )
+  }
+
+  // MARK: - Div
+
+  func test_div_smiSmi() {
+    for smi in self.smiValues {
+      let int = self.create(smi)
+      self.divSmiTest(value: int)
+    }
+  }
+
+  func test_div_smiHeap() {
+    for smi in self.smiValues {
+      let int = self.create(smi)
+      self.divHeapTest(value: int)
+    }
+  }
+
+  func test_div_heapSmi() {
+    for smi in self.heapValues {
+      let int = self.create(smi)
+      self.divSmiTest(value: int)
+    }
+  }
+
+  func test_div_heapHeap() {
+    for p in self.heapValues {
+      let int = self.create(p)
+      self.divHeapTest(value: int)
+    }
+  }
+
+  private func divSmiTest(value: BigInt,
+                          file: StaticString = #file,
+                          line: UInt = #line) {
+    let double = value / MulDivTestValues.smiA / MulDivTestValues.smiB
+    let single = value / MulDivTestValues.smiC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "\(value) / \(MulDivTestValues.smiA) / \(MulDivTestValues.smiB)",
+      file: file,
+      line: line
+    )
+
+    var inoutDouble = value
+    inoutDouble /= MulDivTestValues.smiA
+    inoutDouble /= MulDivTestValues.smiB
+
+    var inoutSingle = value
+    inoutSingle /= MulDivTestValues.smiC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "INOUT !!1 \(value) / \(MulDivTestValues.smiA) / \(MulDivTestValues.smiB)",
+      file: file,
+      line: line
+    )
+  }
+
+  private func divHeapTest(value: BigInt,
+                           file: StaticString = #file,
+                           line: UInt = #line) {
+    let double = value / MulDivTestValues.heapA / MulDivTestValues.heapB
+    let single = value / MulDivTestValues.heapC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "\(value) / \(MulDivTestValues.heapA) / \(MulDivTestValues.heapB)",
+      file: file,
+      line: line
+    )
+
+    var inoutDouble = value
+    inoutDouble /= MulDivTestValues.heapA
+    inoutDouble /= MulDivTestValues.heapB
+
+    var inoutSingle = value
+    inoutSingle /= MulDivTestValues.heapC
+
+    XCTAssertEqual(
+      double,
+      single,
+      "INOUT !!1 \(value) / \(MulDivTestValues.heapA) / \(MulDivTestValues.heapB)",
       file: file,
       line: line
     )
