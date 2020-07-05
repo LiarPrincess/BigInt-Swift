@@ -1,8 +1,5 @@
 // swiftlint:disable file_length
 
-// TODO: We we really want every 'downgradeToSmi'?
-// TODO: In Heap 2nd smi argument should be 'Smi' (+overload)
-
 /// Unlimited, signed integer.
 public struct BigInt:
   SignedInteger,
@@ -77,7 +74,6 @@ public struct BigInt:
   ///
   /// For example: bit width of a `Int64` instance is 64.
   public var bitWidth: Int {
-    // TODO: Check if those 2 are equal
     switch self.value {
     case let .smi(smi):
       return smi.bitWidth
@@ -106,7 +102,6 @@ public struct BigInt:
   /// 6
   /// ```
   public var minRequiredWidth: Int {
-    // TODO: Check if those 2 are equal
     switch self.value {
     case let .smi(smi):
       return smi.minRequiredWidth
@@ -477,7 +472,7 @@ public struct BigInt:
 
   public typealias DivMod = (quotient: BigInt, remainder: BigInt)
 
-  // TODO: Use this in Violet
+  // TODO: [Violet] Use divMod + power
   public func divMod(other: BigInt) -> DivMod {
     func bothHeap(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
       let result = lhs.divMod(other: rhs)
@@ -507,6 +502,27 @@ public struct BigInt:
     case let (.heap(lhs), .heap(rhs)):
       return bothHeap(lhs: lhs, rhs: rhs)
     }
+  }
+
+  // MARK: - Power
+
+  public func power(exponent: BigInt) -> BigInt {
+    precondition(exponent >= 0, "Exponent must be positive")
+
+    var base = self
+    var exponent = exponent
+    var result = BigInt(1)
+
+    while !exponent.isZero {
+      if exponent.isOdd {
+        result *= base
+      }
+
+      base *= base
+      exponent >>= 1
+    }
+
+    return result
   }
 
   // MARK: - And
@@ -739,27 +755,6 @@ public struct BigInt:
       lhs.value = .heap(lhsHeap)
       lhs.downgradeToSmiIfPossible()
     }
-  }
-
-  // MARK: - Power
-
-  public func power(exponent: BigInt) -> BigInt {
-    precondition(exponent >= 0, "Exponent must be positive")
-
-    var base = self
-    var exponent = exponent
-    var result = BigInt(1)
-
-    while !exponent.isZero {
-      if exponent.isOdd {
-        result *= base
-      }
-
-      base *= base
-      exponent >>= 1
-    }
-
-    return result
   }
 
   // MARK: - String

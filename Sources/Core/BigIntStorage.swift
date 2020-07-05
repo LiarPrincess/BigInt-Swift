@@ -3,7 +3,6 @@ import Foundation
 // swiftlint:disable empty_count
 // swiftlint:disable file_length
 
-// TODO: Rename: BigIntHeapStorage
 /// Basically a `Word` collection with a sign.
 ///
 /// Least significant word is at index `0`.
@@ -166,7 +165,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
 
     deinit {
-      // TODO: Test deinit
       // Let it go, let it go
       // Can't hold it back anymore
       // Let it go, let it go
@@ -364,8 +362,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   // MARK: - Set
 
-  // TODO: This should be in 'BigIntHeap'
-
   internal mutating func setToZero() {
     self = Self.zero
     assert(self.isPositive)
@@ -434,8 +430,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
 
   // MARK: - Invariants
 
-  // TODO: This should be in 'BigIntHeap'
-
   internal mutating func fixInvariants() {
     // Trim prefix zeros
     while let last = self.last, last.isZero {
@@ -448,7 +442,6 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
   }
 
-  // TODO: Do not use this! Use 'fixInvariants' instead.
   internal func checkInvariants(source: StaticString = #function) {
     if let last = self.last {
       assert(last != 0, "\(source): zero prefix in BigInt")

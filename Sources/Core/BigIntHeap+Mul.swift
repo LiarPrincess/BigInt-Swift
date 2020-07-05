@@ -2,7 +2,6 @@ extension BigIntHeap {
 
   // MARK: - Smi
 
-  // TODO: Recheck all of the uses of 'checkInvariants'
   internal mutating func mul(other: Smi.Storage) {
     if other == -1 {
       self.negate()

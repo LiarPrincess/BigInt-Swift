@@ -28,7 +28,8 @@ internal struct BigIntHeap: Equatable, Hashable {
     return first & 0b1 == 0
   }
 
-  /// DO NOT USE in general code! This will do allocation!
+  /// DO NOT USE in general code!
+  /// It may allocate!
   ///
   /// This is not one of those 'easy/fast' methods.
   /// It is only here for `BigInt.magnitude`.

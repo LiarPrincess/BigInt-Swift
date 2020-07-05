@@ -41,6 +41,8 @@ extension BigIntHeap {
 
   // MARK: - Words
 
+  /// A collection containing the words of this value’s binary representation,
+  /// in order from the least significant to most significant.
   internal var words: BigIntStorage {
     if self.isZero {
       var singleZeroElement = BigIntStorage(minimumCapacity: 1)
@@ -48,7 +50,6 @@ extension BigIntHeap {
       return singleZeroElement
     }
 
-    // TODO: 2 complement is in the same order as storage [0 word, 1 word etc.]
     return self.asTwoComplement()
   }
 

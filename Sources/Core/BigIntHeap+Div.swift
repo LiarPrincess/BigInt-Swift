@@ -1,5 +1,4 @@
 // swiftlint:disable file_length
-// TODO: Test: (x << 2) >> 2 == x and (x * 2) / 2 = x + rem
 
 // Sources:
 // - V8 (google-javascript-thingie): 'src/objects/bigint.cc'
