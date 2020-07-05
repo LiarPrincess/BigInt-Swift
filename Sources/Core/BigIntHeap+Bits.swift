@@ -41,6 +41,8 @@ extension BigIntHeap {
 
   // MARK: - Words
 
+  /// A collection containing the words of this value’s binary representation,
+  /// in order from the least significant to most significant.
   internal var words: BigIntStorage {
     if self.isZero {
       var singleZeroElement = BigIntStorage(minimumCapacity: 1)
@@ -48,7 +50,6 @@ extension BigIntHeap {
       return singleZeroElement
     }
 
-    // TODO: 2 complement is in the same order as storage [0 word, 1 word etc.]
     return self.asTwoComplement()
   }
 
@@ -120,7 +121,7 @@ extension BigIntHeap {
     }
 
     if other.isZero {
-      self.storage.setToZero()
+      self.setToZero()
       return
     }
 
@@ -155,7 +156,7 @@ extension BigIntHeap {
     }
 
     if other.isZero {
-      self.storage.setToZero()
+      self.setToZero()
       return
     }
 
@@ -214,7 +215,7 @@ extension BigIntHeap {
 
   internal mutating func or(other: Smi.Storage) {
     if self.isZero {
-      self.storage.set(to: Int(other))
+      self.set(to: Int(other))
       return
     }
 
@@ -310,7 +311,7 @@ extension BigIntHeap {
 
   internal mutating func xor(other: Smi.Storage) {
     if self.isZero {
-      self.storage.set(to: Int(other))
+      self.set(to: Int(other))
       return
     }
 
@@ -451,17 +452,17 @@ extension BigIntHeap {
 
     // At this point our 'storage' holds positive number,
     // so we have force 2 complement.
-    var copy = self.storage
-    copy.transformEveryWord(fn: ~) // Invert every word
+    var copy = self
+    copy.storage.transformEveryWord(fn: ~) // Invert every word
     Self.addMagnitude(lhs: &copy, rhs: 1)
 
     // '0' in front indicates positive number,
     // in such case we have to add artificial '1' in front
     // Again, this does not happen very often.
-    if let last = copy.last, last >> (Word.bitWidth - 1) == 0 {
-      copy.append(Word.max)
+    if let last = copy.storage.last, last >> (Word.bitWidth - 1) == 0 {
+      copy.storage.append(Word.max)
     }
 
-    return copy
+    return copy.storage
   }
 }

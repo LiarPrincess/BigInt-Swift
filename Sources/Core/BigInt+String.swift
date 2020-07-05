@@ -131,8 +131,8 @@ extension BigInt {
     // 'dropLast' because we already added 'mostSignificantGroup'
     // 'reversed' because we want to start with 'high' powers
     for group in groups.dropLast().reversed() {
-      BigIntHeap.mulMagnitude(lhs: &result.storage, rhs: power)
-      BigIntHeap.addMagnitude(lhs: &result.storage, rhs: group)
+      BigIntHeap.mulMagnitude(lhs: &result, rhs: power)
+      BigIntHeap.addMagnitude(lhs: &result, rhs: group)
     }
 
     result.fixInvariants()

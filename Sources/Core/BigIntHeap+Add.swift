@@ -13,13 +13,13 @@ extension BigIntHeap {
     let word = Word(other.magnitude)
 
     if self.isZero {
-      self.storage.set(to: Int(other))
+      self.set(to: Int(other))
       return
     }
 
     // If we have the same sign then we can simply add magnitude.
     if self.isPositive == other.isPositive {
-      Self.addMagnitude(lhs: &self.storage, rhs: word)
+      Self.addMagnitude(lhs: &self, rhs: word)
       return
     }
 
@@ -36,6 +36,10 @@ extension BigIntHeap {
     self.sub(other: word) // x - y
     self.negate() // -(x - y)
     self.fixInvariants()
+  }
+
+  internal static func addMagnitude(lhs: inout BigIntHeap, rhs: Word) {
+    Self.addMagnitude(lhs: &lhs.storage, rhs: rhs)
   }
 
   internal static func addMagnitude(lhs: inout BigIntStorage, rhs: Word) {
@@ -74,7 +78,7 @@ extension BigIntHeap {
 
     // If we have the same sign then we can simply add magnitude.
     if self.isPositive == other.isPositive {
-      Self.addMagnitudes(lhs: &self.storage, rhs: other.storage)
+      Self.addMagnitudes(lhs: &self, rhs: other)
       return
     }
 

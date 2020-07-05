@@ -106,14 +106,14 @@ extension BigIntHeap {
 
     switch self.compareMagnitude(with: other) {
     case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
-      self.storage.set(to: resultIsNegative ? -1 : 1)
+      self.set(to: resultIsNegative ? -1 : 1)
       return .zero
 
     case .less: // 3 / 5 = 0 rem 3
       // Basically return 'self' as remainder
       assert(self.storage.count == 1)
       let remainderMagnitude = self.storage[0]
-      self.storage.setToZero()
+      self.setToZero()
       return DivWordRemainder(isNegative: remainderIsNegative,
                               magnitude: remainderMagnitude)
 
@@ -181,14 +181,14 @@ extension BigIntHeap {
 
     switch self.compareMagnitude(with: other) {
     case .equal: // 5 / 5 = 1 rem 0 and also 5 / (-5) = -1 rem 0
-      self.storage.set(to: resultIsNegative ? -1 : 1)
+      self.set(to: resultIsNegative ? -1 : 1)
       return .zero
 
     case .less: // 3 / 5 = 0 rem 3
       // Basically return 'self' as remainder
       // We have to do a little dance to avoid COW.
       var remainder = self
-      self.storage.setToZero() // Will use predefined 'BigIntStorage.zero'
+      self.setToZero() // Will use predefined 'BigIntStorage.zero'
       remainder.storage.isNegative = remainderIsNegative // No COW here
       return remainder
 

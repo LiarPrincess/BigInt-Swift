@@ -23,7 +23,7 @@ extension BigIntHeap {
     // - self.isPositive && other.isNegative (for example:  5 - (-6) = 5 + 6 = 11)
     // which is the same as:
     if self.isNegative != other.isNegative {
-      Self.addMagnitude(lhs: &self.storage, rhs: word)
+      Self.addMagnitude(lhs: &self, rhs: word)
       return
     }
 
@@ -36,7 +36,7 @@ extension BigIntHeap {
   internal mutating func sub(other: Word) {
     // Different sign: 'self' negative, 'other' positive: -1 - 2
     if self.isNegative {
-      Self.addMagnitude(lhs: &self.storage, rhs: other)
+      Self.addMagnitude(lhs: &self, rhs: other)
       return
     }
 
@@ -56,12 +56,12 @@ extension BigIntHeap {
 
     switch self.compareMagnitude(with: other) {
     case .equal: // 1 - 1
-      self.storage.setToZero()
+      self.setToZero()
 
     case .less: // 1 - 2 = -(-1 + 2)  = -(2 - 1), we are changing sign
       let changedSign = !self.isNegative
       let result = other - self.storage[0]
-      self.storage.set(to: result)
+      self.set(to: result)
       self.storage.isNegative = changedSign
 
     case .greater: // 2 - 1, sign stays the same
@@ -109,7 +109,7 @@ extension BigIntHeap {
     // - self.isPositive && other.isNegative (for example:  5 - (-6) = 5 + 6 = 11)
     // which is the same as:
     if self.isNegative != other.isNegative {
-      Self.addMagnitudes(lhs: &self.storage, rhs: other.storage)
+      Self.addMagnitudes(lhs: &self, rhs: other)
       return
     }
 
@@ -117,7 +117,7 @@ extension BigIntHeap {
     // That means that we may need to cross 0.
     switch self.compareMagnitude(with: other) {
     case .equal: // 1 - 1
-      self.storage.setToZero()
+      self.setToZero()
 
     case .less: // 1 - 2 = -(-1 + 2)  = -(2 - 1), we are changing sign
       let changedSign = !self.isNegative
