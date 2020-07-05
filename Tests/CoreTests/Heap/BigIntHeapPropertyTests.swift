@@ -52,6 +52,55 @@ class BigIntHeapPropertyTests: XCTestCase {
     }
   }
 
+  // MARK: - Magnitude
+
+  func test_magnitude_trivial() {
+    let zero = BigIntHeap(0)
+    XCTAssertEqual(zero.magnitude, BigInt(0))
+
+    let one = BigIntHeap(1)
+    XCTAssertEqual(one.magnitude, BigInt(1))
+
+    let minusOne = BigIntHeap(-1)
+    XCTAssertEqual(minusOne.magnitude, BigInt(1))
+  }
+
+  func test_magnitude_int() {
+    for int in generateIntValues(countButNotReally: 100) {
+      let heap = BigIntHeap(int)
+      let magnitude = heap.magnitude
+
+      let expected = int.magnitude
+      XCTAssert(magnitude == expected, "\(int)")
+    }
+  }
+
+  func test_manitude_heap() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      if p.isZero {
+        continue
+      }
+
+      let negative = BigIntHeap(isNegative: true, words: p.words)
+      let magnitude = negative.magnitude
+
+      let expected = BigIntHeap(isNegative: false, words: p.words)
+      XCTAssertEqual(magnitude, BigInt(expected))
+    }
+  }
+
+  func test_manitude_negation() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      if p.isZero {
+        continue
+      }
+
+      let positive = BigIntHeap(isNegative: false, words: p.words)
+      let negative = BigIntHeap(isNegative: true, words: p.words)
+      XCTAssertEqual(positive.magnitude, negative.magnitude)
+    }
+  }
+
   // MARK: - Has magnitude of 1
 
   func test_hasMagnitudeOfOne_true() {
