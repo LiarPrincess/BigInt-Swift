@@ -93,7 +93,7 @@ extension BigIntHeap {
       self.shiftLeft(count: word)
     } else {
       guard let word = self.guaranteeSingleWord(shiftCount: count) else {
-        self.shiftIntoOblivion()
+        self.storage.setToZero()
         return
       }
 
@@ -150,7 +150,7 @@ extension BigIntHeap {
 
     // Nonsensical shifts (such as '1 >> 1000') return '0' (or '-1' for negative).
     if self.storage.isEmpty {
-      self.shiftIntoOblivion()
+      self.storage.set(to: self.isNegative ? -1 : 0)
       return
     }
 
@@ -208,7 +208,7 @@ extension BigIntHeap {
 
     if wasNegative && self.isZero {
       // '-1 >> 1000' = '-1'
-      self.set(to: -1)
+      self.storage.set(to: -1)
     } else if needsFloorAdjustmentForNegativeNumbers {
       self.adjustAfterRightShift()
     }
@@ -230,7 +230,7 @@ extension BigIntHeap {
   }
 
   private mutating func adjustAfterRightShift() {
-    Self.addMagnitude(lhs: &self, rhs: Word(1))
+    Self.addMagnitude(lhs: &self.storage, rhs: Word(1))
   }
 
   internal mutating func shiftRight(count: BigIntHeap) {
@@ -240,7 +240,7 @@ extension BigIntHeap {
 
     if count.isPositive {
       guard let word = self.guaranteeSingleWord(shiftCount: count) else {
-        self.shiftIntoOblivion()
+        self.storage.setToZero()
         return
       }
 
@@ -255,12 +255,6 @@ extension BigIntHeap {
 
       self.shiftLeft(count: word)
     }
-  }
-
-  /// Use when right shift totally removes the value.
-  /// For example `2 >> 100`.
-  private mutating func shiftIntoOblivion() {
-    self.set(to: self.isNegative ? -1 : 0)
   }
 
   // MARK: - Sane left shift

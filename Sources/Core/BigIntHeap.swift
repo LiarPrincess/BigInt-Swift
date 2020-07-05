@@ -73,41 +73,6 @@ internal struct BigIntHeap: Equatable, Hashable {
     self.storage.checkInvariants()
   }
 
-  // MARK: - Set
-
-  internal mutating func setToZero() {
-    self.storage = BigIntStorage.zero
-    assert(self.isPositive)
-  }
-
-  /// Set `self` to represent given `Word`.
-  internal mutating func set(to value: Word) {
-    // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do it anyway.
-
-    if value == 0 {
-      self.setToZero()
-    } else {
-      self.storage.removeAll()
-      self.storage.isNegative = false
-      self.storage.append(value)
-    }
-  }
-
-  /// Set `self` to represent given `Int`.
-  internal mutating func set(to value: Int) {
-    // We do not have to call 'self.guaranteeUniqueBufferReference'
-    // because all of the functions we are using will do it anyway.
-
-    if value == 0 {
-      self.setToZero()
-    } else {
-      self.storage.removeAll()
-      self.storage.isNegative = value.isNegative
-      self.storage.append(value.magnitude)
-    }
-  }
-
   // MARK: - Type conversion
 
   internal func asSmiIfPossible() -> Smi? {

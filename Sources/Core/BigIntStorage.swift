@@ -3,6 +3,7 @@ import Foundation
 // swiftlint:disable empty_count
 // swiftlint:disable file_length
 
+// TODO: Rename: BigIntHeapStorage
 /// Basically a `Word` collection with a sign.
 ///
 /// Least significant word is at index `0`.
@@ -165,6 +166,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     }
 
     deinit {
+      // TODO: Test deinit
       // Let it go, let it go
       // Can't hold it back anymore
       // Let it go, let it go
@@ -358,6 +360,43 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
     // We do not have to call 'self.guaranteeUniqueBufferReference'
     // because 'self.count' will do it anyway.
     self.count = 0
+  }
+
+  // MARK: - Set
+
+  // TODO: This should be in 'BigIntHeap'
+
+  internal mutating func setToZero() {
+    self = Self.zero
+    assert(self.isPositive)
+  }
+
+  /// Set `self` to represent given `UInt`.
+  internal mutating func set(to value: UInt) {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do it anyway.
+
+    if value == 0 {
+      self.setToZero()
+    } else {
+      self.removeAll()
+      self.isNegative = false
+      self.append(value)
+    }
+  }
+
+  /// Set `self` to represent given `Int`.
+  internal mutating func set(to value: Int) {
+    // We do not have to call 'self.guaranteeUniqueBufferReference'
+    // because all of the functions we are using will do it anyway.
+
+    if value == 0 {
+      self.setToZero()
+    } else {
+      self.removeAll()
+      self.isNegative = value.isNegative
+      self.append(value.magnitude)
+    }
   }
 
   // MARK: - String
