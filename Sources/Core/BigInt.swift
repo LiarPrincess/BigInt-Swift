@@ -83,6 +83,8 @@ public struct BigInt:
   }
 
   /// The number of trailing zeros in this value’s binary representation.
+  ///
+  /// Will return `0` for `0`.
   public var trailingZeroBitCount: Int {
     switch self.value {
     case let .smi(smi):

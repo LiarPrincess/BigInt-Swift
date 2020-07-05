@@ -1,7 +1,74 @@
 import XCTest
 @testable import Core
 
+private typealias Word = BigIntHeap.Word
+
 class BigIntPropertyTests: XCTestCase {
+
+  // MARK: - Trailing zero bit count
+
+  func test_trailingZeroBitCount_zero() {
+    let zero = BigInt(0)
+    XCTAssertEqual(zero.trailingZeroBitCount, 0)
+  }
+
+  func test_trailingZeroBitCount_int() {
+    for raw in generateIntValues(countButNotReally: 100) {
+      if raw.isZero {
+        continue
+      }
+
+      let int = BigInt(raw)
+      let result = int.trailingZeroBitCount
+
+      let expected = raw.trailingZeroBitCount
+      XCTAssertEqual(result, expected)
+    }
+  }
+
+  func test_trailingZeroBitCount_heap_nonZeroFirstWord() {
+    for p in generateHeapValues(countButNotReally: 100, maxWordCount: 3) {
+      if p.isZero {
+        continue
+      }
+
+      // We have separate test for numbers that have '0' last word
+      if p.words[0] == 0 {
+        continue
+      }
+
+      let heap = p.create()
+      let int = BigInt(heap)
+      let result = int.trailingZeroBitCount
+
+      let expected = p.words[0].trailingZeroBitCount
+      XCTAssertEqual(result, expected)
+    }
+  }
+
+  func test_trailingZeroBitCount_heap_zeroFirstWord() {
+    for p in generateHeapValues(countButNotReally: 100, maxWordCount: 3) {
+      if p.isZero {
+        continue
+      }
+
+      guard p.words.count > 1 else {
+        continue
+      }
+
+      var words = p.words
+      words[0] = 0
+
+      let heap = BigIntHeap(isNegative: p.isNegative, words: words)
+      let int = BigInt(heap)
+      let result = int.trailingZeroBitCount
+
+      let expected = Word.bitWidth + p.words[1].trailingZeroBitCount
+      XCTAssertEqual(result, expected)
+    }
+  }
+
+  // TODO: Zero 1st word
 
   // MARK: - Eve, odd
 
