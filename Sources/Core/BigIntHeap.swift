@@ -19,6 +19,15 @@ internal struct BigIntHeap: Equatable, Hashable {
     return self.storage.isNegative
   }
 
+  internal var isEven: Bool {
+    guard let first = self.storage.first else {
+      assert(self.isZero)
+      return true // '0' is even
+    }
+
+    return first & 0b1 == 0
+  }
+
   /// DO NOT USE in general code! This will do allocation!
   ///
   /// This is not one of those 'easy/fast' methods.

@@ -296,8 +296,36 @@ extension NodeTests {
     }
 
     let result = lhs.divMod(other: rhs)
-    XCTAssertEqual(result.quotient, div, file: file, line: line)
-    XCTAssertEqual(result.remainder, mod, file: file, line: line)
+    XCTAssertEqual(result.quotient, div, "div", file: file, line: line)
+    XCTAssertEqual(result.remainder, mod, "mod", file: file, line: line)
+  }
+
+  // MARK: - Power
+
+  internal func powerTest(base baseString: String,
+                          exponent exponentInt: Int,
+                          expecting expectedString: String,
+                          file: StaticString = #file,
+                          line: UInt = #line) {
+    let base: BigInt
+    do {
+      base = try self.create(string: baseString, radix: 10)
+    } catch {
+      XCTFail("Unable to parse lhs: \(error)", file: file, line: line)
+      return
+    }
+
+    let expected: BigInt
+    do {
+      expected = try self.create(string: expectedString, radix: 10)
+    } catch {
+      XCTFail("Unable to parse expected: \(error)", file: file, line: line)
+      return
+    }
+
+    let exp = BigInt(exponentInt)
+    let result = base.power(exponent: exp)
+    XCTAssertEqual(result, expected, file: file, line: line)
   }
 
   // MARK: - Shifts

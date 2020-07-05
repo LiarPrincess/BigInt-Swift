@@ -123,6 +123,42 @@ function printDivModTest(
   console.log();
 }
 
+// =============
+// === Power ===
+// =============
+
+export function printPowerTests() {
+  const name = 'Power';
+  const nameLower = 'power';
+  const testFn = `self.${nameLower}Test`;
+
+  console.log(`  // MARK: - ${name}`);
+  console.log();
+
+  printPowerTest(`${nameLower}_smi`, testFn, smiNumbers);
+  printPowerTest(`${nameLower}_heap`, testFn, heapNumbers);
+}
+
+const exponents = [0n, 1n, 2n, 3n, 5n, 10n];
+
+function printPowerTest(
+  name: string,
+  testFn: string,
+  values: bigint[]
+) {
+  const isDiv = true;
+
+  console.log(`  func test_${name}() {`);
+  for (const value of values) {
+    for (const exponent of exponents) {
+      const result = value ** exponent;
+      console.log(`    ${testFn}(base: "${value}", exponent: ${exponent}, expecting: "${result}")`);
+    }
+  }
+  console.log('  }');
+  console.log();
+}
+
 // ==============
 // === Shifts ===
 // ==============

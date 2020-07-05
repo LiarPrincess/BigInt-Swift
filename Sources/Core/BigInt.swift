@@ -115,6 +115,19 @@ public struct BigInt:
     }
   }
 
+  public var isOdd: Bool {
+    return !self.isEven
+  }
+
+  public var isEven: Bool {
+    switch self.value {
+    case let .smi(smi):
+      return smi.isEven
+    case let .heap(heap):
+      return heap.isEven
+    }
+  }
+
   /// The magnitude of this value.
   ///
   /// For any numeric value `x`, `x.magnitude` is the absolute value of `x`.
@@ -728,7 +741,26 @@ public struct BigInt:
     }
   }
 
-  // TODO: power(exponent:)
+  // MARK: - Power
+
+  public func power(exponent: BigInt) -> BigInt {
+    precondition(exponent >= 0, "Exponent must be positive")
+
+    var base = self
+    var exponent = exponent
+    var result = BigInt(1)
+
+    while !exponent.isZero {
+      if exponent.isOdd {
+        result *= base
+      }
+
+      base *= base
+      exponent >>= 1
+    }
+
+    return result
+  }
 
   // MARK: - String
 

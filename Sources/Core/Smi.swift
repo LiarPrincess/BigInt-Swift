@@ -23,6 +23,10 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     return self.value.isPositive
   }
 
+  internal var isEven: Bool {
+    return self.value & 0b1 == 0
+  }
+
   internal var words: Words {
     return self.value.words
   }
