@@ -95,7 +95,7 @@ public struct BigInt:
   }
 
   /// Minimal number of bits necessary to represent `self` in binary.
-  /// `bitLength` in Python.
+  /// `bit_length` in Python.
   ///
   /// ```py
   /// >>> bin(37)

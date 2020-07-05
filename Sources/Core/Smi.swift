@@ -32,7 +32,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
   }
 
   internal var bitWidth: Int {
-    return self.value.bitWidth
+    return self.minRequiredWidth
   }
 
   internal var trailingZeroBitCount: Int {
@@ -52,7 +52,11 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
   }
 
   internal var minRequiredWidth: Int {
-    return self.value.minRequiredWidth
+    if self.isZero {
+      return 0
+    }
+
+    return self.value.bitsInDigit()
   }
 
   // MARK: - Init

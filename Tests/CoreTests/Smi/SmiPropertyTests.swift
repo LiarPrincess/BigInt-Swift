@@ -123,10 +123,12 @@ class SmiPropertyTests: XCTestCase {
 
   // MARK: - Min required width
 
-  func test_minRequiredWidth() {
-    self.minRequiredWidth(all0, minRequiredWidth: 0)
-    self.minRequiredWidth(all1, minRequiredWidth: 1) // -1 requires 1 bit
+  func test_minRequiredWidth_trivial() {
+    self.minRequiredWidth(all0, expected: 0)
+    self.minRequiredWidth(all1, expected: 1) // -1 requires 1 bit
+  }
 
+  func test_minRequiredWidth_allPositivePowersOf2() {
     for (power, value) in allPositivePowersOf2(type: Storage.self) {
       // >>> for i in range(1, 10):
       // ...     value = 1 << i
@@ -137,9 +139,11 @@ class SmiPropertyTests: XCTestCase {
       // 3 8 4
       // 4 16 5
       let minRequiredWidth = power + 1
-      self.minRequiredWidth(value, minRequiredWidth: minRequiredWidth)
+      self.minRequiredWidth(value, expected: minRequiredWidth)
     }
+  }
 
+  func test_minRequiredWidth_allNegativePowersOf2() {
     for (power, value) in allNegativePowersOf2(type: Storage.self) {
       // >>> for i in range(1, 10):
       // ...     value = 1 << i
@@ -150,15 +154,23 @@ class SmiPropertyTests: XCTestCase {
       // 3 4
       // (etc)
       let minRequiredWidth = power + 1
-      self.minRequiredWidth(value, minRequiredWidth: minRequiredWidth)
+      self.minRequiredWidth(value, expected: minRequiredWidth)
+    }
+  }
+
+  func test_minRequiredWidth_predefined() {
+    for (smi, expected) in MinRequiredWidthTestCases.smi {
+      let int = BigInt(smi)
+      let result = int.minRequiredWidth
+      XCTAssertEqual(result, expected, "\(smi)")
     }
   }
 
   private func minRequiredWidth(_ value: Int32,
-                                minRequiredWidth: Int,
+                                expected: Int,
                                 file: StaticString = #file,
                                 line: UInt = #line) {
     let smi = Smi(value)
-    XCTAssertEqual(smi.minRequiredWidth, minRequiredWidth, file: file, line: line)
+    XCTAssertEqual(smi.minRequiredWidth, expected, file: file, line: line)
   }
 }

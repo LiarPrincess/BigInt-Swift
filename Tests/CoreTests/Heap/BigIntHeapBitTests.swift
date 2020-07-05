@@ -43,32 +43,55 @@ class BigIntHeapBitTests: XCTestCase {
 
   // MARK: - Bit width
 
+  // Just need to check if we return the same thing as 'minRequiredWidth'
   func test_bitWidth_singleWord() {
-    let zero = BigIntHeap(0)
-    XCTAssertEqual(zero.bitWidth, 0)
-
-    let plus1 = BigIntHeap(1)
-    XCTAssertEqual(plus1.bitWidth, 2) // 01
-
-    let minus1 = BigIntHeap(-1)
-    XCTAssertEqual(minus1.bitWidth, 1) // 1
-
-    let plusMax = BigIntHeap(isNegative: false, words: .max)
-    XCTAssertEqual(plusMax.bitWidth, Word.bitWidth + 1) // 0 1111...
-
-    let minusMax = BigIntHeap(isNegative: true, words: .max)
-    XCTAssertEqual(minusMax.bitWidth, Word.bitWidth) // 1111...
-  }
-
-  func test_bitWidth_multipleWords() {
-    for int in generateIntValues(countButNotReally: 10) {
+    for int in generateIntValues(countButNotReally: 100) {
       let word = Word(bitPattern: int)
 
-      let positive = BigIntHeap(isNegative: false, words: word, 1)
-      XCTAssertEqual(positive.bitWidth, Word.bitWidth + 2) // 01 word
+      let positive = BigIntHeap(isNegative: false, words: word)
+      XCTAssertEqual(positive.bitWidth, positive.minRequiredWidth)
 
-      let negative = BigIntHeap(isNegative: true, words: word, 1)
-      XCTAssertEqual(negative.bitWidth, Word.bitWidth + 1) // 1 word
+      let negative = BigIntHeap(isNegative: true, words: word)
+      XCTAssertEqual(negative.bitWidth, negative.minRequiredWidth)
+    }
+  }
+
+  // Just need to check if we return the same thing as 'minRequiredWidth'
+  func test_bitWidth_multipleWords() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      let positive = BigIntHeap(isNegative: false, words: p.words)
+      XCTAssertEqual(positive.bitWidth, positive.minRequiredWidth)
+
+      let negative = BigIntHeap(isNegative: true, words: p.words)
+      XCTAssertEqual(negative.bitWidth, negative.minRequiredWidth)
+    }
+  }
+
+  // MARK: - Min required width
+
+  func test_minRequiredWidth_smi() {
+    for (smi, expected) in MinRequiredWidthTestCases.smi {
+      let heap = BigIntHeap(smi)
+      let result = heap.minRequiredWidth
+      XCTAssertEqual(result, expected, "\(smi)")
+    }
+  }
+
+  func test_minRequiredWidth_heap() {
+    for (string, expected) in MinRequiredWidthTestCases.heap {
+      do {
+        let int = try BigInt(string)
+
+        switch int.value {
+        case .smi:
+          assert(false) // We have separate test for this
+        case .heap(let h):
+          let result = h.minRequiredWidth
+          XCTAssertEqual(result, expected, string)
+        }
+      } catch {
+        XCTFail("\(string), error: \(error)")
+      }
     }
   }
 

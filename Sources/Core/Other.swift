@@ -46,18 +46,30 @@ extension BinaryInteger {
 
 // MARK: - FixedWidthInteger + full width
 
+private let bitLengthTable = [
+  0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+]
+
 extension FixedWidthInteger {
 
-  /// Number of bits necessary to represent self in binary.
-  /// `bitLength` in Python.
-  internal var minRequiredWidth: Int {
-    if self >= .zero {
-      return self.bitWidth - self.leadingZeroBitCount
+  /// Returns the unique integer `k` such that
+  /// `2**(k-1) <= d < 2**k` if d is nonzero, else `0`.
+  ///
+  /// CPython:
+  /// static int
+  /// bits_in_digit(digit d)
+  internal func bitsInDigit() -> Int {
+    var result = 0
+    var d = self.magnitude
+
+    while d >= 32 {
+      result += 6
+      d >>= 6
     }
 
-    let sign = 1
-    let inverted = ~self
-    return self.bitWidth - inverted.leadingZeroBitCount + sign
+    result += bitLengthTable[Int(d)]
+    return result
   }
 
   internal typealias FullWidthAdd = (carry: Self, result: Self)

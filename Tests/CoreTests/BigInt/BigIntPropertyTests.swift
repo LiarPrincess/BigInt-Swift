@@ -5,6 +5,33 @@ private typealias Word = BigIntHeap.Word
 
 class BigIntPropertyTests: XCTestCase {
 
+  // TODO: [xxx] words
+  // TODO: [xxx] bitWidth
+
+  // MARK: - Min required width
+
+  func test_minRequiredWidth_smi() {
+    for (smi, expected) in MinRequiredWidthTestCases.smi {
+      let int = BigInt(smi)
+      let result = int.minRequiredWidth
+      XCTAssertEqual(result, expected, "\(smi)")
+    }
+  }
+
+  func test_minRequiredWidth_heap() {
+    for (string, expected) in MinRequiredWidthTestCases.heap {
+      do {
+        let int = try BigInt(string)
+        assert(int.magnitude > Smi.Storage.max)
+
+        let result = int.minRequiredWidth
+        XCTAssertEqual(result, expected, string)
+      } catch {
+        XCTFail("\(string), error: \(error)")
+      }
+    }
+  }
+
   // MARK: - Trailing zero bit count
 
   func test_trailingZeroBitCount_zero() {
@@ -67,8 +94,6 @@ class BigIntPropertyTests: XCTestCase {
       XCTAssertEqual(result, expected)
     }
   }
-
-  // TODO: Zero 1st word
 
   // MARK: - Eve, odd
 

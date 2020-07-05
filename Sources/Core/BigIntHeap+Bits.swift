@@ -57,20 +57,20 @@ extension BigIntHeap {
 
   /// The minimum number of bits required to represent this integer in binary.
   internal var bitWidth: Int {
+    return self.minRequiredWidth
+  }
+
+  internal var minRequiredWidth: Int {
     guard let last = self.storage.last else {
       assert(self.isZero)
       return 0
     }
 
-    // If we are positive we need '0' prefix,
-    // starting with '1' means negative number
-    let sign = self.isPositive ? 1 : 0
-    let wordBits = self.storage.count * Word.bitWidth
-    return wordBits - last.leadingZeroBitCount + sign
-  }
+    assert(!last.isZero)
 
-  internal var minRequiredWidth: Int {
-    return self.bitWidth
+    let fullWordWidth = (self.storage.count - 1) * Word.bitWidth
+    let partialWordWidth = last.bitsInDigit()
+    return fullWordWidth + partialWordWidth
   }
 
   // MARK: - Trailing zero bit count

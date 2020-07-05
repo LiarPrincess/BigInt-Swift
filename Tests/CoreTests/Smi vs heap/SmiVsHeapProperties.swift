@@ -3,6 +3,8 @@ import XCTest
 
 class SmiVsHeapProperties: XCTestCase {
 
+  // MARK: - Words
+
   func test_words() {
     for raw in generateSmiValues(countButNotReally: 100) {
       let smi = Smi(raw)
@@ -30,6 +32,20 @@ class SmiVsHeapProperties: XCTestCase {
 
       let heap = BigIntHeap(raw)
       let heapResult = heap.trailingZeroBitCount
+
+      XCTAssertEqual(smiResult, heapResult, "\(raw)")
+    }
+  }
+
+  // MARK: - Min required width
+
+  func test_minRequiredWidth() {
+    for raw in generateSmiValues(countButNotReally: 100) {
+      let smi = Smi(raw)
+      let smiResult = smi.minRequiredWidth
+
+      let heap = BigIntHeap(raw)
+      let heapResult = heap.minRequiredWidth
 
       XCTAssertEqual(smiResult, heapResult, "\(raw)")
     }
