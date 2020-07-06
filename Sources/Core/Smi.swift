@@ -119,7 +119,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     // - 'result' is positive, we have to 2 compliment it and treat as unsigned
     //
     // If we were zero:
-    // - well... how did we overflow?
+    // - well… how did we overflow?
 
     let x = self.isNegative ? ((~result) &+ 1) : result
     let unsigned = Storage.Magnitude(bitPattern: x)
@@ -183,7 +183,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     // - 'other' is 0
     // - 'Storage.min / -1' -> value 1 greater than Storage.max
 
-    precondition(other.value != 0, "Division by zero") // Well, hello there...
+    precondition(other.value != 0, "Division by zero") // Well, hello there…
 
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))
@@ -205,7 +205,7 @@ internal struct Smi: Hashable, CustomStringConvertible, CustomDebugStringConvert
     // This has the same assumptions for overflow as 'div'.
     // Please check 'div' for details.
 
-    precondition(other.value != 0, "Division by zero") // Well, hello there...
+    precondition(other.value != 0, "Division by zero") // Well, hello there…
 
     assert(self.value == Storage.min)
     assert(other.value == Storage(-1))
