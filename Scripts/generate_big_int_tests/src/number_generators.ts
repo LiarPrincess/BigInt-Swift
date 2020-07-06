@@ -36,7 +36,7 @@ export function generateSmiNumbers(countButNotReally: number): bigint[] {
 // ============
 
 export const wordMax = 18446744073709551615n;
-export const wordMin = 0;
+export const wordMin = 0n;
 
 /**
  * We will return `2 * countButNotReally + 5` values (don't ask).

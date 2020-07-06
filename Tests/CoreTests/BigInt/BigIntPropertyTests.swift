@@ -22,8 +22,6 @@ class BigIntPropertyTests: XCTestCase {
     for (string, expected) in MinRequiredWidthTestCases.heap {
       do {
         let int = try BigInt(string)
-        assert(int.magnitude > Smi.Storage.max)
-
         let result = int.minRequiredWidth
         XCTAssertEqual(result, expected, string)
       } catch {
