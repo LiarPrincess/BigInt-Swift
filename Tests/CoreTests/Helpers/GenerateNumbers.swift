@@ -32,8 +32,8 @@ private func generateValues<T: FixedWidthInteger>(
 
   var result = [T]()
   result.append(0)
-  result.append(-1)
   result.append(1)
+  result.append(-1)
 
   let step = Int(T.max) / countButNotReally
 
