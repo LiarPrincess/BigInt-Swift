@@ -21,7 +21,19 @@ class SmiVsHeapProperties: XCTestCase {
     }
   }
 
+  // MARK: - Bit width
+
   func test_bitWidth() {
+    for raw in generateSmiValues(countButNotReally: 100) {
+      let smi = Smi(raw)
+      let smiResult = smi.bitWidth
+
+      let heap = BigIntHeap(raw)
+      let heapResult = heap.bitWidth
+
+      XCTAssertEqual(smiResult, heapResult, "\(raw)")
+    }
+  }
 
   // MARK: - Trailing zero bit count
 
