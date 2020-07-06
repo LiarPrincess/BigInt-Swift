@@ -5,8 +5,41 @@ private typealias Word = BigIntHeap.Word
 
 class BigIntPropertyTests: XCTestCase {
 
-  // TODO: [xxx] words
-  // TODO: [xxx] bitWidth
+  // MARK: - Words
+
+  func test_words() {
+    for int in generateIntValues(countButNotReally: 100) {
+      let value = BigInt(int)
+
+      let result = value.words
+      let expected = int.words
+
+      XCTAssertEqual(result.count, expected.count, "\(int)")
+
+      for (r, e) in zip(result, expected) {
+        XCTAssertEqual(r, e, "\(int)")
+      }
+    }
+  }
+
+  // MARK: - Bit width
+
+  // Just need to check if we return the same thing as 'minRequiredWidth'
+  func test_bitWidth_singleWord() {
+    for int in generateIntValues(countButNotReally: 100) {
+      let value = BigInt(int)
+      XCTAssertEqual(value.bitWidth, value.minRequiredWidth)
+    }
+  }
+
+  // Just need to check if we return the same thing as 'minRequiredWidth'
+  func test_bitWidth_multipleWords() {
+    for p in generateHeapValues(countButNotReally: 100) {
+      let heap = p.create()
+      let value = BigInt(heap)
+      XCTAssertEqual(value.bitWidth, value.minRequiredWidth)
+    }
+  }
 
   // MARK: - Min required width
 
@@ -93,7 +126,7 @@ class BigIntPropertyTests: XCTestCase {
     }
   }
 
-  // MARK: - Eve, odd
+  // MARK: - Even, odd
 
   func test_smi() {
     for smi in generateSmiValues(countButNotReally: 100) {
