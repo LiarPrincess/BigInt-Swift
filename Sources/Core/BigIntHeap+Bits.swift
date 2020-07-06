@@ -223,7 +223,6 @@ extension BigIntHeap {
       return
     }
 
-    // TODO: We can actally do a simple 2 complement here
     // Negative numbers are complicated, so we give up and allocate.
     if self.isNegative || other.isNegative {
       let heap = BigIntHeap(other)

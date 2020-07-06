@@ -4,7 +4,7 @@ import XCTest
 private typealias Storage = Smi.Storage
 
 private let all0 = Storage(0)
-private let all1 = Storage(~0) // TODO: Why this calls 'BigInt.Words' from 'valuePairs'?
+private let all1 = Storage(~0)
 
 // `01010101...`
 private let alternating01: Storage = {
