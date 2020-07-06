@@ -458,7 +458,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       return
     }
 
-    // Well... shit
+    // Well… shit
     let new = Self.createBuffer(
       header: self.buffer.header,
       minimumCapacity: self.capacity
@@ -475,7 +475,7 @@ internal struct BigIntStorage: RandomAccessCollection, Equatable, CustomStringCo
       return
     }
 
-    // Well... shit, we have to allocate new buffer,
+    // Well… shit, we have to allocate new buffer,
     // but we can grow at the same time (2 birds - 1 stone).
     let growFactor = 2
     let capacity = Swift.max(minimumCapacity, growFactor * self.capacity, 1)

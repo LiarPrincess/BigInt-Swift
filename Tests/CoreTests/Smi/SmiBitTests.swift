@@ -6,7 +6,7 @@ private typealias Storage = Smi.Storage
 private let all0 = Storage(0)
 private let all1 = Storage(~0)
 
-// `01010101...`
+// `01010101…`
 private let alternating01: Storage = {
   let shiftCount = Storage.bitWidth / 2
 
@@ -20,7 +20,7 @@ private let alternating01: Storage = {
   return result
 }()
 
-// `10101010...`
+// `10101010…`
 private let alternating10 = ~alternating01
 
 class SmiBtTests: XCTestCase {

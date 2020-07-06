@@ -109,7 +109,7 @@ class BigIntPowerTests: XCTestCase {
   func test_againstFoundationPow() {
     // THIS IS NOT A PERFECT TEST!
     // It is 'good enough' to be usable, but don't think about it too much!
-    let mantissaCount = Double.significandBitCount // well... technically '+1'
+    let mantissaCount = Double.significandBitCount // well… technically '+1'
     let maxExactlyRepresentable = UInt(pow(Double(2), Double(mantissaCount)))
 
     // 'smi ^ 2' has greater possibility of beeing in 'Double' range than 'Int'

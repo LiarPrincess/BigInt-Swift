@@ -21,7 +21,7 @@ class BigIntHeapHashableTests: XCTestCase {
         continue
       }
 
-      // Just check if it does not crash... no assert here
+      // Just check if it does not crash… no assert here
       _ = heap.hashValue
     }
   }

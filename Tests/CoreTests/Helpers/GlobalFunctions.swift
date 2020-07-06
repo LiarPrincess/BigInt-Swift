@@ -62,7 +62,7 @@ internal func allPossiblePairings<T, S>(lhs: [T], rhs: [S]) -> PossiblePairings<
 
 internal typealias PowerOf2<T> = (power: Int, value: T)
 
-/// `1, 2, 4, 8, 16, 32, 64, 128, 256, 512, etc...`
+/// `1, 2, 4, 8, 16, 32, 64, 128, 256, 512, etc…`
 internal func allPositivePowersOf2<T: FixedWidthInteger & BinaryInteger>(
   type: T.Type
 ) -> [PowerOf2<T>] {
@@ -77,7 +77,7 @@ internal func allPositivePowersOf2<T: FixedWidthInteger & BinaryInteger>(
   return result
 }
 
-/// `-1, -2, -4, -8, -16, -32, -64, -128, -256, -512, etc...`
+/// `-1, -2, -4, -8, -16, -32, -64, -128, -256, -512, etc…`
 internal func allNegativePowersOf2<T: FixedWidthInteger & BinaryInteger>(
   type: T.Type
 ) -> [PowerOf2<T>] {

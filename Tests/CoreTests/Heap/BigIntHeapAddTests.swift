@@ -50,7 +50,7 @@ class BigIntHeapAddTests: XCTestCase {
     XCTAssertEqual(value, expected)
   }
 
-  /// Word.max + smiMax = well... a lot
+  /// Word.max + smiMax = well… a lot
   func test_smi_bothPositive_newWord() {
     var value = BigIntHeap(isNegative: false, words: Word.max)
     value.add(other: smiMax)
@@ -71,7 +71,7 @@ class BigIntHeapAddTests: XCTestCase {
     XCTAssertEqual(value, expected)
   }
 
-  /// -Word.max + (-smiMax) = well... a lot
+  /// -Word.max + (-smiMax) = well… a lot
   func test_smi_bothNegative_newWord() {
     var value = BigIntHeap(isNegative: true, words: Word.max)
     value.add(other: -smiMax)
@@ -261,7 +261,7 @@ class BigIntHeapAddTests: XCTestCase {
     XCTAssertEqual(value, expected)
   }
 
-  /// Word.max + smiMax = well... a lot
+  /// Word.max + smiMax = well… a lot
   func test_heap_bothPositive_newWord() {
     var value = BigIntHeap(isNegative: false, words: Word.max)
     value.add(other: BigIntHeap(smiMax))
@@ -282,7 +282,7 @@ class BigIntHeapAddTests: XCTestCase {
     XCTAssertEqual(value, expected)
   }
 
-  /// -Word.max + (-smiMax) = well... a lot
+  /// -Word.max + (-smiMax) = well… a lot
   func test_heap_bothNegative_newWord() {
     var value = BigIntHeap(isNegative: true, words: Word.max)
     value.add(other: BigIntHeap(-smiMax))

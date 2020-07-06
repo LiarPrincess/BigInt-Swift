@@ -42,7 +42,7 @@ extension BigIntHeap {
   // MARK: - Comparable
 
   internal static func < (heap: BigIntHeap, smi: Smi.Storage) -> Bool {
-    // Negative values are always smaller than positive ones (because math...)
+    // Negative values are always smaller than positive ones (because math…)
     guard heap.isNegative == smi.isNegative else {
       return heap.isNegative
     }
@@ -54,7 +54,7 @@ extension BigIntHeap {
   }
 
   internal static func < (lhs: BigIntHeap, rhs: BigIntHeap) -> Bool {
-    // Negative values are always smaller than positive ones (because math...)
+    // Negative values are always smaller than positive ones (because math…)
     guard lhs.isNegative == rhs.isNegative else {
       return lhs.isNegative
     }
@@ -78,7 +78,7 @@ extension BigIntHeap {
       // --------------------------------- 0 --------------------------------->
       // big magnitude                    zero                    big magnitude
       //
-      // Soo... if we are positive:
+      // Soo… if we are positive:
       // - bigger magnitude  -> bigger number (further away from '0')
       // - smaller magnitude -> smaller number (closer to '0')
       //
