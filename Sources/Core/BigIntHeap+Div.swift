@@ -444,12 +444,16 @@ extension BigIntHeap {
   // MARK: - Mod
 
   internal mutating func mod(other: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     var copy = self
     let mod = copy.div(other: other)
     self = BigIntHeap(mod)
   }
 
   internal mutating func mod(other: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     var copy = self
     let mod = copy.div(other: other)
     self = mod

@@ -3,6 +3,8 @@ extension BigIntHeap {
   // MARK: - Smi
 
   internal mutating func mul(other: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     if other == -1 {
       self.negate()
       return
@@ -22,6 +24,8 @@ extension BigIntHeap {
   // MARK: - Word
 
   internal mutating func mul(other: Word) {
+    defer { self.checkInvariants() }
+
     // Special cases for 'other': 0, 1
     if other.isZero {
       self.storage.setToZero()

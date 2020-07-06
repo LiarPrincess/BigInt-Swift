@@ -8,9 +8,11 @@
 
 extension BigIntHeap {
 
-  // MARK: - Left
+  // MARK: - Left - smi
 
   internal mutating func shiftLeft(count: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     let word = Word(count.magnitude)
 
     if count.isPositive {
@@ -20,7 +22,11 @@ extension BigIntHeap {
     }
   }
 
+  // MARK: - Left - word
+
   internal mutating func shiftLeft(count: Word) {
+    defer { self.checkInvariants() }
+
     if self.isZero || count.isZero {
       return
     }
@@ -77,7 +83,11 @@ extension BigIntHeap {
     self.fixInvariants()
   }
 
+  // MARK: - Left - heap
+
   internal mutating func shiftLeft(count: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     if count.isZero {
       return
     }
@@ -101,9 +111,11 @@ extension BigIntHeap {
     }
   }
 
-  // MARK: - Right
+  // MARK: - Right - smi
 
   internal mutating func shiftRight(count: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     let word = Word(count.magnitude)
 
     if count.isPositive {
@@ -113,6 +125,8 @@ extension BigIntHeap {
     }
   }
 
+  // MARK: - Right - word
+
 // swiftlint:disable function_body_length
 
   /// static void
@@ -120,6 +134,8 @@ extension BigIntHeap {
   ///     enum mpz_div_round_mode mode)
   internal mutating func shiftRight(count: Word) {
 // swiftlint:enable function_body_length
+
+    defer { self.checkInvariants() }
 
     if self.isZero || count.isZero {
       return
@@ -233,7 +249,11 @@ extension BigIntHeap {
     Self.addMagnitude(lhs: &self.storage, rhs: Word(1))
   }
 
+  // MARK: - Right - heap
+
   internal mutating func shiftRight(count: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     if count.isZero {
       return
     }

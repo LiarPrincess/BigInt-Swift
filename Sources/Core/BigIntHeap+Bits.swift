@@ -116,6 +116,8 @@ extension BigIntHeap {
   // MARK: - And
 
   internal mutating func and(other: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     if self.isZero {
       return
     }
@@ -151,6 +153,8 @@ extension BigIntHeap {
   ///
   /// Variable names mostly taken from GMP.
   internal mutating func and(other: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     if self.isZero {
       return
     }
@@ -214,6 +218,8 @@ extension BigIntHeap {
   // MARK: - Or
 
   internal mutating func or(other: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     if self.isZero {
       self.storage.set(to: Int(other))
       return
@@ -246,6 +252,8 @@ extension BigIntHeap {
   ///
   /// Variable names mostly taken from GMP.
   internal mutating func or(other: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     if self.isZero {
       self.storage = other.storage
       return
@@ -309,6 +317,8 @@ extension BigIntHeap {
   // MARK: - Xor
 
   internal mutating func xor(other: Smi.Storage) {
+    defer { self.checkInvariants() }
+
     if self.isZero {
       self.storage.set(to: Int(other))
       return
@@ -341,6 +351,8 @@ extension BigIntHeap {
   ///
   /// Variable names mostly taken from GMP.
   internal mutating func xor(other: BigIntHeap) {
+    defer { self.checkInvariants() }
+
     if self.isZero {
       self.storage = other.storage
       return

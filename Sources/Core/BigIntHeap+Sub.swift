@@ -34,6 +34,8 @@ extension BigIntHeap {
   // MARK: - Word
 
   internal mutating func sub(other: Word) {
+    defer { self.checkInvariants() }
+
     // Different sign: 'self' negative, 'other' positive: -1 - 2
     if self.isNegative {
       Self.addMagnitude(lhs: &self.storage, rhs: other)
