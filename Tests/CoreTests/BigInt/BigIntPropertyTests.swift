@@ -5,6 +5,15 @@ private typealias Word = BigIntHeap.Word
 
 class BigIntPropertyTests: XCTestCase {
 
+  // MARK: - Description
+
+  func test_description() {
+    for int in generateIntValues(countButNotReally: 100) {
+      let value = BigInt(int)
+      XCTAssertEqual(value.description, int.description, "\(int)")
+    }
+  }
+
   // MARK: - Words
 
   func test_words() {
