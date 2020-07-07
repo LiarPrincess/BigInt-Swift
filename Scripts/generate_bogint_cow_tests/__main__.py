@@ -1,4 +1,26 @@
-def print_tests(name, operator):
+def print_unary_test(name, operator):
+  name_upper = name
+  name_lower = name_upper.lower()
+
+  print(f'''\
+  // MARK: - {name_upper}
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_{name_lower}_doesNotModifyOriginal() {{
+    // {operator}smi
+    var value = BigInt(SmiStorage.max)
+    _ = {operator}value
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // {operator}heap
+    value = BigInt(HeapWord.max)
+    _ = {operator}value
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }}
+''')
+
+def print_binary_tests(name, operator):
   name_upper = name
   name_lower = name_upper.lower()
 
@@ -123,8 +145,12 @@ def print_tests(name, operator):
 ''')
 
 if __name__ == '__main__':
-  print_tests('Add', '+')
-  print_tests('Sub', '-')
-  print_tests('Mul', '*')
-  print_tests('Div', '/')
-  print_tests('Mod', '%')
+  print_unary_test('Plus', '+')
+  print_unary_test('Minus', '-')
+  print_unary_test('Invert', '~')
+
+  print_binary_tests('Add', '+')
+  print_binary_tests('Sub', '-')
+  print_binary_tests('Mul', '*')
+  print_binary_tests('Div', '/')
+  print_binary_tests('Mod', '%')

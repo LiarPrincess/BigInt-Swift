@@ -12,6 +12,54 @@ class BigIntCOWTests: XCTestCase {
   private let smiValue = BigInt(2)
   private let heapValue = BigInt(HeapWord.max)
 
+  // MARK: - Plus
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_plus_doesNotModifyOriginal() {
+    // +smi
+    var value = BigInt(SmiStorage.max)
+    _ = +value
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // +heap
+    value = BigInt(HeapWord.max)
+    _ = +value
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  // MARK: - Minus
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_minus_doesNotModifyOriginal() {
+    // -smi
+    var value = BigInt(SmiStorage.max)
+    _ = -value
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // -heap
+    value = BigInt(HeapWord.max)
+    _ = -value
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  // MARK: - Invert
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_invert_doesNotModifyOriginal() {
+    // ~smi
+    var value = BigInt(SmiStorage.max)
+    _ = ~value
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // ~heap
+    value = BigInt(HeapWord.max)
+    _ = ~value
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
   // MARK: - Add
 
   /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
