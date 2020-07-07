@@ -474,8 +474,8 @@ public struct BigInt:
 
   public typealias DivMod = (quotient: BigInt, remainder: BigInt)
 
-  // TODO: [Violet] Use divMod + power
-  public func divMod(other: BigInt) -> DivMod {
+  // TODO: [Violet] Use quotientAndRemainder + power
+  public func quotientAndRemainder(dividingBy other: BigInt) -> DivMod {
     func bothHeap(lhs: BigIntHeap, rhs: BigIntHeap) -> DivMod {
       let result = lhs.divMod(other: rhs)
       let quotient = BigInt(result.quotient)

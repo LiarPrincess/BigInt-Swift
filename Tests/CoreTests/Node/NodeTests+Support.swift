@@ -295,7 +295,7 @@ extension NodeTests {
       return
     }
 
-    let result = lhs.divMod(other: rhs)
+    let result = lhs.quotientAndRemainder(dividingBy: rhs)
     XCTAssertEqual(result.quotient, div, "div", file: file, line: line)
     XCTAssertEqual(result.remainder, mod, "mod", file: file, line: line)
   }
