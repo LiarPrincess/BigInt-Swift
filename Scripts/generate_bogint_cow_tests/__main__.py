@@ -144,6 +144,78 @@ def print_binary_tests(name, operator):
   }}
 ''')
 
+def print_shift_tests(direction, operator):
+  direction_upper = direction
+  direction_lower = direction_upper.lower()
+
+  print(f'''\
+  // MARK: - Shift {direction_lower}
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_shift{direction_upper}_copy_doesNotModifyOriginal() {{
+    // smi {operator} int
+    var value = BigInt(SmiStorage.max)
+    var copy = value
+    _ = copy {operator} self.shiftCount
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap {operator} int
+    value = BigInt(HeapWord.max)
+    copy = value
+    _ = copy {operator} self.shiftCount
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }}
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_shift{direction_upper}_inout_doesNotModifyOriginal() {{
+    // smi {operator} int
+    var value = BigInt(SmiStorage.max)
+    self.shift{direction_upper}(value: &value)
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap {operator} int
+    value = BigInt(HeapWord.max)
+    self.shift{direction_upper}(value: &value)
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }}
+
+  private func shift{direction_upper}(value: inout BigInt) {{
+    _ = value {operator} self.shiftCount
+  }}
+
+  func test_shift{direction_upper}Equal_copy_doesNotModifyOriginal() {{
+    // smi {operator} int
+    var value = BigInt(SmiStorage.max)
+    var copy = value
+    copy {operator}= self.shiftCount
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap {operator} int
+    value = BigInt(HeapWord.max)
+    copy = value
+    copy {operator}= self.shiftCount
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }}
+
+  func test_shift{direction_upper}Equal_inout_doesModifyOriginal() {{
+    // smi {operator} int
+    var value = BigInt(SmiStorage.max)
+    self.shift{direction_upper}Equal(value: &value)
+    XCTAssertNotEqual(value, BigInt(SmiStorage.max))
+
+    // heap {operator} int
+    value = BigInt(HeapWord.max)
+    self.shift{direction_upper}Equal(value: &value)
+    XCTAssertNotEqual(value, BigInt(HeapWord.max))
+  }}
+
+  private func shift{direction_upper}Equal(value: inout BigInt) {{
+    value {operator}= self.shiftCount
+  }}
+''')
+
 if __name__ == '__main__':
   print_unary_test('Plus', '+')
   print_unary_test('Minus', '-')
@@ -154,3 +226,6 @@ if __name__ == '__main__':
   print_binary_tests('Mul', '*')
   print_binary_tests('Div', '/')
   print_binary_tests('Mod', '%')
+
+  print_shift_tests('Left', '<<')
+  print_shift_tests('Right', '>>')

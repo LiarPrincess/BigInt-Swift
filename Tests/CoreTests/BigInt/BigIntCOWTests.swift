@@ -11,6 +11,7 @@ class BigIntCOWTests: XCTestCase {
   // This can't be '1' because 'n *= 1 -> n' (which is one of our test cases)
   private let smiValue = BigInt(2)
   private let heapValue = BigInt(HeapWord.max)
+  private let shiftCount = 3
 
   // MARK: - Plus
 
@@ -649,5 +650,137 @@ class BigIntCOWTests: XCTestCase {
 
   private func modEqualHeap(toInout value: inout BigInt) {
     value %= self.heapValue
+  }
+
+  // MARK: - Shift left
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_shiftLeft_copy_doesNotModifyOriginal() {
+    // smi << int
+    var value = BigInt(SmiStorage.max)
+    var copy = value
+    _ = copy << self.shiftCount
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap << int
+    value = BigInt(HeapWord.max)
+    copy = value
+    _ = copy << self.shiftCount
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_shiftLeft_inout_doesNotModifyOriginal() {
+    // smi << int
+    var value = BigInt(SmiStorage.max)
+    self.shiftLeft(value: &value)
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap << int
+    value = BigInt(HeapWord.max)
+    self.shiftLeft(value: &value)
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  private func shiftLeft(value: inout BigInt) {
+    _ = value << self.shiftCount
+  }
+
+  func test_shiftLeftEqual_copy_doesNotModifyOriginal() {
+    // smi << int
+    var value = BigInt(SmiStorage.max)
+    var copy = value
+    copy <<= self.shiftCount
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap << int
+    value = BigInt(HeapWord.max)
+    copy = value
+    copy <<= self.shiftCount
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  func test_shiftLeftEqual_inout_doesModifyOriginal() {
+    // smi << int
+    var value = BigInt(SmiStorage.max)
+    self.shiftLeftEqual(value: &value)
+    XCTAssertNotEqual(value, BigInt(SmiStorage.max))
+
+    // heap << int
+    value = BigInt(HeapWord.max)
+    self.shiftLeftEqual(value: &value)
+    XCTAssertNotEqual(value, BigInt(HeapWord.max))
+  }
+
+  private func shiftLeftEqual(value: inout BigInt) {
+    value <<= self.shiftCount
+  }
+
+  // MARK: - Shift right
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_shiftRight_copy_doesNotModifyOriginal() {
+    // smi >> int
+    var value = BigInt(SmiStorage.max)
+    var copy = value
+    _ = copy >> self.shiftCount
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap >> int
+    value = BigInt(HeapWord.max)
+    copy = value
+    _ = copy >> self.shiftCount
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  /// This test actually DOES make sense, because, even though 'BigInt' is immutable,
+  /// the heap that is points to is not.
+  func test_shiftRight_inout_doesNotModifyOriginal() {
+    // smi >> int
+    var value = BigInt(SmiStorage.max)
+    self.shiftRight(value: &value)
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap >> int
+    value = BigInt(HeapWord.max)
+    self.shiftRight(value: &value)
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  private func shiftRight(value: inout BigInt) {
+    _ = value >> self.shiftCount
+  }
+
+  func test_shiftRightEqual_copy_doesNotModifyOriginal() {
+    // smi >> int
+    var value = BigInt(SmiStorage.max)
+    var copy = value
+    copy >>= self.shiftCount
+    XCTAssertEqual(value, BigInt(SmiStorage.max))
+
+    // heap >> int
+    value = BigInt(HeapWord.max)
+    copy = value
+    copy >>= self.shiftCount
+    XCTAssertEqual(value, BigInt(HeapWord.max))
+  }
+
+  func test_shiftRightEqual_inout_doesModifyOriginal() {
+    // smi >> int
+    var value = BigInt(SmiStorage.max)
+    self.shiftRightEqual(value: &value)
+    XCTAssertNotEqual(value, BigInt(SmiStorage.max))
+
+    // heap >> int
+    value = BigInt(HeapWord.max)
+    self.shiftRightEqual(value: &value)
+    XCTAssertNotEqual(value, BigInt(HeapWord.max))
+  }
+
+  private func shiftRightEqual(value: inout BigInt) {
+    value >>= self.shiftCount
   }
 }
