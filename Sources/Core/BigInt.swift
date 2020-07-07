@@ -125,6 +125,24 @@ public struct BigInt:
     }
   }
 
+  public var isZero: Bool {
+    switch self.value {
+    case let .smi(smi):
+      return smi.isZero
+    case let .heap(heap):
+      return heap.isZero
+    }
+  }
+
+  public var isOne: Bool {
+    switch self.value {
+    case let .smi(smi):
+      return smi.value == 1
+    case let .heap(heap):
+      return heap.isPositive && heap.hasMagnitudeOfOne
+    }
+  }
+
   /// The magnitude of this value.
   ///
   /// For any numeric value `x`, `x.magnitude` is the absolute value of `x`.
@@ -511,19 +529,26 @@ public struct BigInt:
   public func power(exponent: BigInt) -> BigInt {
     precondition(exponent >= 0, "Exponent must be positive")
 
+    if exponent.isZero {
+      return BigInt(1)
+    }
+
     var base = self
     var exponent = exponent
     var result = BigInt(1)
 
-    while !exponent.isZero {
+    // Eventually we will arrive to most significant '1'
+    while !exponent.isOne {
       if exponent.isOdd {
         result *= base
       }
 
       base *= base
-      exponent >>= 1
+      exponent >>= 1 // Basicaly divided by 2, but faster
     }
 
+    // Most significant '1' is odd:
+    result *= base
     return result
   }
 
